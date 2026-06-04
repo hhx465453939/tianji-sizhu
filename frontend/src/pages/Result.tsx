@@ -36,15 +36,41 @@ function Result() {
   const handleCopyPrompt = async () => {
     if (!result || !input) return
     const prompt = generatePrompt(result, input, template)
-    try {
-      await navigator.clipboard.writeText(prompt)
-    } catch {
+    let success = false
+
+    // Method 1: navigator.clipboard (requires HTTPS or localhost)
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(prompt)
+        success = true
+      } catch { /* blocked on non-secure context */ }
+    }
+
+    // Method 2: Wails binding
+    if (!success && (window as any)?.go?.main) {
       try {
         const { CopyToClipboard } = await import('../../wailsjs/go/main/App')
         await CopyToClipboard(prompt)
-      } catch { /* ignore in dev */ }
+        success = true
+      } catch { /* Wails not available */ }
     }
-    setCopied(true)
+
+    // Method 3: legacy execCommand fallback (works on HTTP)
+    if (!success) {
+      try {
+        const textarea = document.createElement('textarea')
+        textarea.value = prompt
+        textarea.style.position = 'fixed'
+        textarea.style.opacity = '0'
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+        success = true
+      } catch { /* last resort failed */ }
+    }
+
+    setCopied(success)
     setTimeout(() => setCopied(false), 2000)
   }
 
