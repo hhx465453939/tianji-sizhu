@@ -126,9 +126,12 @@ ${input.name ? `- 备注：${input.name}` : ''}
 
   // Analysis hints from library
   if (result.analysis.XiYongShen && result.analysis.XiYongShen.length > 0) {
+    const xiyong = result.analysis.XiYongShen.map((s: any) =>
+      typeof s === 'string' ? s : (s?.judge || JSON.stringify(s))
+    )
     prompt += `
 ## 喜用神参考
-${result.analysis.XiYongShen.join('\n')}
+${xiyong.join('\n')}
 `
   }
 

@@ -99,7 +99,7 @@ export interface BaziResult {
   analysis: {
     rishi: string[]
     SanMingTongHui: string[]
-    XiYongShen: string[]
+    XiYongShen: any[]
   }
 
   // YuanHaiZiping

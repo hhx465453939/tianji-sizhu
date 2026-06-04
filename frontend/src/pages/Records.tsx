@@ -18,6 +18,7 @@ function Records() {
   }, [])
 
   const loadRecords = async () => {
+    if (!(window as any)?.go?.main) return
     try {
       const { ListCharts } = await import('../../wailsjs/go/main/App')
       const list = await ListCharts()

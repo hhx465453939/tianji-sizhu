@@ -181,7 +181,7 @@ function Result() {
           <h3 className="text-sm text-gray-400 mb-2">喜用神</h3>
           <div className="text-sm space-y-1">
             {result.analysis.XiYongShen.map((s, i) => (
-              <div key={i}>{s}</div>
+              <div key={i}>{typeof s === 'string' ? s : (s as any)?.judge || JSON.stringify(s)}</div>
             ))}
           </div>
         </div>
