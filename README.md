@@ -40,6 +40,21 @@ wails build -platform windows/amd64
 - pnpm
 - Wails CLI v2
 
+## 致谢
+
+本项目的诞生离不开以下优秀开源项目的启发与支持：
+
+| 项目 | 贡献 |
+|------|------|
+| [mystilight-8char](https://github.com/mystilight/mystilight-8char) | 核心排盘算法引擎，提供完整的四柱、十神、神煞、大运计算能力 |
+| [8Char-H5](https://github.com/mrsunx/8Char-H5) | 基于 UniAPP 的八字排盘工具，功能设计上给予了重要参考 |
+| [cantian-ai/bazi-mcp](https://github.com/cantian-ai/bazi-mcp) | JSON 结构化输出与 RESTful API 设计思路的参考 |
+| [命语 (mingyu)](https://github.com/nicekid1/mingyu) | "排盘 + AI Prompt"深度结合的前瞻性理念启发 |
+| [Wails](https://github.com/wailsapp/wails) | 轻量级 Go + WebView 桌面应用框架 |
+| [ECharts](https://github.com/apache/echarts) | 强大的数据可视化图表库 |
+
+同时感谢开源命理社区中众多无私分享算法与经验的开发者们。
+
 ## 协议
 
 见 [LICENSE](./LICENSE) 文件。
