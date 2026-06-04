@@ -12,20 +12,23 @@ function NavBar() {
   if (location.pathname === '/result') return null
 
   return (
-    <nav className="flex items-center justify-between px-6 py-3 bg-gray-800/50 border-b border-gray-700/50">
-      <button onClick={() => navigate('/')} className="text-lg font-bold hover:text-blue-400 transition-colors">
+    <nav className="flex items-center justify-between px-6 py-3 bg-ink-800 border-b border-bronze/30">
+      <button
+        onClick={() => navigate('/')}
+        className="font-heading text-lg text-gold tracking-traditional hover:text-gold-light transition-colors"
+      >
         天机四柱
       </button>
-      <div className="flex gap-3 text-sm">
+      <div className="flex gap-4 text-sm font-body">
         {!isHome && (
-          <button onClick={() => navigate('/')} className="text-gray-400 hover:text-white transition-colors">
+          <button onClick={() => navigate('/')} className="text-[var(--text-secondary)] hover:text-gold transition-colors">
             排盘
           </button>
         )}
-        <button onClick={() => navigate('/records')} className="text-gray-400 hover:text-white transition-colors">
+        <button onClick={() => navigate('/records')} className="text-[var(--text-secondary)] hover:text-gold transition-colors">
           记录
         </button>
-        <button onClick={() => navigate('/settings')} className="text-gray-400 hover:text-white transition-colors">
+        <button onClick={() => navigate('/settings')} className="text-[var(--text-secondary)] hover:text-gold transition-colors">
           设置
         </button>
       </div>
@@ -36,7 +39,7 @@ function NavBar() {
 function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-900 text-gray-100">
+      <div className="min-h-screen bg-ink-900 text-parchment-300 font-body">
         <NavBar />
         <Routes>
           <Route path="/" element={<Home />} />

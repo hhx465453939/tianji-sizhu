@@ -16,20 +16,21 @@ const PILLAR_LABELS = [
 ] as const
 
 const SHENSHA_COLORS: Record<string, string> = {
-  '贵人': 'bg-yellow-800/60 text-yellow-200 border-yellow-600',
-  '桃花': 'bg-pink-800/60 text-pink-200 border-pink-600',
-  '驿马': 'bg-blue-800/60 text-blue-200 border-blue-600',
-  '华盖': 'bg-purple-800/60 text-purple-200 border-purple-600',
-  '将星': 'bg-red-800/60 text-red-200 border-red-600',
-  '禄': 'bg-green-800/60 text-green-200 border-green-600',
-  '羊刃': 'bg-red-900/60 text-red-300 border-red-700',
+  '贵人': 'border-gold bg-gold/10 text-gold',
+  '桃花': 'border-cinnabar/60 bg-cinnabar/10 text-cinnabar-light',
+  '驿马': 'border-water bg-water/10 text-[#6b9bc3]',
+  '华盖': 'border-[#7c5cbf] bg-[#7c5cbf]/10 text-[#b69cf0]',
+  '将星': 'border-cinnabar bg-cinnabar/15 text-cinnabar-light',
+  '禄': 'border-wood bg-wood/10 text-jade-light',
+  '羊刃': 'border-cinnabar-dark bg-cinnabar-dark/15 text-cinnabar',
+  '福星': 'border-gold bg-gold/10 text-gold-light',
 }
 
 function getShenshaStyle(name: string): string {
   for (const [keyword, style] of Object.entries(SHENSHA_COLORS)) {
     if (name.includes(keyword)) return style
   }
-  return 'bg-gray-700/60 text-gray-200 border-gray-600'
+  return 'border-bronze/50 bg-bronze/10 text-[var(--text-secondary)]'
 }
 
 export default function ShenshaPanel({ shensha }: Props) {
@@ -40,22 +41,21 @@ export default function ShenshaPanel({ shensha }: Props) {
   if (!hasShensha && !hasCurrentShensha) return null
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4">
-      <h3 className="text-sm text-gray-400 mb-3">神煞</h3>
+    <div className="panel-traditional p-4">
+      <h3 className="text-xs text-gold/70 mb-3 font-heading tracking-wide-cn">神煞</h3>
 
-      {/* Pillars shensha */}
-      <div className="space-y-2 mb-4">
+      <div className="space-y-2.5 mb-4">
         {PILLAR_LABELS.map(({ key, label }) => {
           const items = shensha[key] || []
           if (items.length === 0) return null
           return (
             <div key={key} className="flex items-start gap-2">
-              <span className="text-xs text-gray-500 w-10 flex-shrink-0 pt-1">{label}</span>
-              <div className="flex flex-wrap gap-1">
+              <span className="text-xs text-[var(--text-muted)] w-10 flex-shrink-0 pt-0.5 font-heading">{label}</span>
+              <div className="flex flex-wrap gap-1.5">
                 {items.map((s, i) => (
                   <span
                     key={i}
-                    className={`px-2 py-0.5 rounded text-xs border ${getShenshaStyle(s)}`}
+                    className={`px-2 py-0.5 rounded-sm text-xs border-2 font-heading tracking-wide-cn ${getShenshaStyle(s)}`}
                   >
                     {s}
                   </span>
@@ -66,18 +66,17 @@ export default function ShenshaPanel({ shensha }: Props) {
         })}
       </div>
 
-      {/* Current fortune shensha */}
       {hasCurrentShensha && (
-        <div className="border-t border-gray-700 pt-3">
-          <div className="text-xs text-gray-500 mb-2">当前运势神煞</div>
-          <div className="flex flex-wrap gap-1">
+        <div className="border-t border-bronze/20 pt-3">
+          <div className="text-xs text-[var(--text-muted)] mb-2 font-heading">当前运势神煞</div>
+          <div className="flex flex-wrap gap-1.5">
             {shensha.current?.daYun?.map((s, i) => (
-              <span key={`dy-${i}`} className="px-2 py-0.5 rounded text-xs bg-blue-900/40 text-blue-200 border border-blue-700">
+              <span key={`dy-${i}`} className="px-2 py-0.5 rounded-sm text-xs border-2 border-gold/40 bg-gold/10 text-gold font-heading">
                 大运·{s}
               </span>
             ))}
             {shensha.current?.liuNian?.map((s, i) => (
-              <span key={`ln-${i}`} className="px-2 py-0.5 rounded text-xs bg-teal-900/40 text-teal-200 border border-teal-700">
+              <span key={`ln-${i}`} className="px-2 py-0.5 rounded-sm text-xs border-2 border-jade/40 bg-jade/10 text-jade-light font-heading">
                 流年·{s}
               </span>
             ))}

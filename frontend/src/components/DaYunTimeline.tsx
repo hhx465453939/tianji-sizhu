@@ -11,26 +11,28 @@ export default function DaYunTimeline({ dayunArr, currentStartYear }: Props) {
   const currentYear = new Date().getFullYear()
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4">
-      <h3 className="text-sm text-gray-400 mb-3">大运</h3>
-      <div className="flex gap-1 overflow-x-auto pb-2">
-        {dayunArr.map((dy, i) => {
-          const isCurrent = currentStartYear
-            ? dy.startYear === currentStartYear
-            : (dy.startYear <= currentYear && dy.liunianArr?.some(l => l.year >= currentYear))
-          return (
-            <div
-              key={i}
-              className={`flex-shrink-0 rounded-lg p-3 text-center min-w-[72px] transition-colors ${
-                isCurrent ? 'bg-blue-900 border border-blue-500' : 'bg-gray-700'
-              }`}
-            >
-              <div className="text-lg font-bold">{dy.ganZhi}</div>
-              <div className="text-xs text-gray-400 mt-1">{dy.ganshen}/{dy.zhishen}</div>
-              <div className="text-xs text-gray-500 mt-1">{dy.startYear}</div>
-            </div>
-          )
-        })}
+    <div className="panel-traditional p-4">
+      <h3 className="text-xs text-gold/70 mb-3 font-heading tracking-wide-cn">大运</h3>
+      <div className="scroll-container p-3">
+        <div className="flex gap-0 overflow-x-auto pb-2">
+          {dayunArr.filter(dy => dy.ganZhi).map((dy, i) => {
+            const isCurrent = currentStartYear
+              ? dy.startYear === currentStartYear
+              : (dy.startYear <= currentYear && dy.liunianArr?.some(l => l.year >= currentYear))
+            return (
+              <div
+                key={i}
+                className={`flex-shrink-0 p-3 text-center min-w-[72px] border-r border-bronze/20 last:border-r-0 transition-colors ${
+                  isCurrent ? 'bg-ink-600 glow-gold border-gold/50' : 'hover:bg-ink-700'
+                }`}
+              >
+                <div className="text-lg font-bold font-ganzhi text-parchment-100">{dy.ganZhi}</div>
+                <div className="text-xs text-[var(--text-tertiary)] mt-1">{dy.ganshen}/{dy.zhishen}</div>
+                <div className="text-xs text-[var(--text-muted)] mt-1">{dy.startYear}</div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

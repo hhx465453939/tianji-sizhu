@@ -9,4 +9,8 @@ export default defineConfig({
       'mystilight-8char': path.resolve(__dirname, 'node_modules/mystilight-8char/index.js'),
     },
   },
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+  },
 })

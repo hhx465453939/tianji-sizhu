@@ -69,15 +69,15 @@ function Result() {
   if (error) {
     return (
       <div className="p-8 max-w-4xl mx-auto">
-        <div className="bg-red-900/30 border border-red-700 rounded-lg p-4">
-          <p className="text-red-300">排盘计算出错：{error}</p>
-          <button onClick={() => navigate('/')} className="mt-4 px-4 py-2 bg-gray-700 rounded text-sm">返回</button>
+        <div className="panel-traditional p-4 border-cinnabar/40">
+          <p className="text-cinnabar-light">排盘计算出错：{error}</p>
+          <button onClick={() => navigate('/')} className="mt-4 px-4 py-2 bg-ink-700 border border-bronze/30 rounded-sm text-sm">返回</button>
         </div>
       </div>
     )
   }
 
-  if (!result) return <div className="p-8 text-center text-gray-400">计算中...</div>
+  if (!result) return <div className="p-8 text-center text-[var(--text-secondary)]">计算中...</div>
 
   const currentDaYunStart = result.currentYun?.daYun?.startYear
 
@@ -86,19 +86,19 @@ function Result() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">排盘结果</h1>
+          <h1 className="text-xl font-semibold font-heading text-gold tracking-wide-cn">排盘结果</h1>
           {input && (
-            <p className="text-gray-400 text-sm mt-1">
+            <p className="text-[var(--text-secondary)] text-sm mt-1">
               {input.name && `${input.name} · `}
               {input.gender === 0 ? '男' : '女'} · {input.year}年{input.month}月{input.day}日
             </p>
           )}
         </div>
         <div className="flex gap-2">
-          <button onClick={() => navigate('/')} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+          <button onClick={() => navigate('/')} className="px-4 py-2 bg-ink-700 hover:bg-ink-600 border border-bronze/30 rounded-sm text-sm transition-colors">
             返回
           </button>
-          <button onClick={handleSave} className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded text-sm">
+          <button onClick={handleSave} className="px-4 py-2 bg-jade-dark hover:bg-jade border border-jade/30 rounded-sm text-sm transition-colors">
             保存
           </button>
         </div>
@@ -114,10 +114,10 @@ function Result() {
 
       {/* Day Master & Special Pillars */}
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-gray-800 rounded-lg p-4">
-          <h3 className="text-sm text-gray-400 mb-2">日主</h3>
-          <div className="text-2xl font-bold">{result.dayMaster}（{result.dayMasterWuXing}）</div>
-          <div className="text-sm text-gray-400 mt-2">
+        <div className="panel-traditional p-4">
+          <h3 className="text-xs text-gold/70 mb-2 font-heading tracking-wide-cn border-b border-bronze/20 pb-2">日主</h3>
+          <div className="text-2xl font-bold font-ganzhi text-parchment-100">{result.dayMaster}（{result.dayMasterWuXing}）</div>
+          <div className="text-sm text-[var(--text-secondary)] mt-2">
             {typeof result.yuanHaiZiping.shenQiang === 'object'
               ? `${result.yuanHaiZiping.shenQiang.judge}（得分：${result.yuanHaiZiping.shenQiang.score}）`
               : `身强指数：${result.yuanHaiZiping.shenQiang}`}
@@ -127,9 +127,9 @@ function Result() {
               : `湿度：${result.yuanHaiZiping.shidu}`}
           </div>
         </div>
-        <div className="bg-gray-800 rounded-lg p-4">
-          <h3 className="text-sm text-gray-400 mb-2">特殊宫位</h3>
-          <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="panel-traditional p-4">
+          <h3 className="text-xs text-gold/70 mb-2 font-heading tracking-wide-cn border-b border-bronze/20 pb-2">特殊宫位</h3>
+          <div className="grid grid-cols-2 gap-2 text-sm text-[var(--text-secondary)]">
             <div>胎元：{result.taiYuan}</div>
             <div>命宫：{result.mingGong}</div>
             <div>胎息：{result.taiXi}</div>
@@ -150,29 +150,29 @@ function Result() {
 
       {/* Current Fortune */}
       {result.currentYun?.daYun && (
-        <div className="bg-gray-800 rounded-lg p-4 mb-6">
-          <h3 className="text-sm text-gray-400 mb-2">当前运势</h3>
+        <div className="panel-traditional p-4 mb-6">
+          <h3 className="text-xs text-gold/70 mb-2 font-heading tracking-wide-cn border-b border-bronze/20 pb-2">当前运势</h3>
           <div className="flex gap-6">
             <div>
-              <span className="text-gray-500 text-sm">大运：</span>
-              <span className="text-lg font-bold">
+              <span className="text-[var(--text-tertiary)] text-sm">大运：</span>
+              <span className="text-lg font-bold font-ganzhi text-parchment-100">
                 {Array.isArray(result.currentYun.daYun.ganZhi)
                   ? result.currentYun.daYun.ganZhi.join('')
                   : result.currentYun.daYun.ganZhi}
               </span>
-              <span className="text-xs text-gray-500 ml-2">
+              <span className="text-xs text-[var(--text-muted)] ml-2">
                 ({result.currentYun.daYun.startYear}-{result.currentYun.daYun.endYear})
               </span>
             </div>
             {result.currentYun.liuNian && (
               <div>
-                <span className="text-gray-500 text-sm">流年：</span>
-                <span className="text-lg font-bold">
+                <span className="text-[var(--text-tertiary)] text-sm">流年：</span>
+                <span className="text-lg font-bold font-ganzhi text-parchment-100">
                   {Array.isArray(result.currentYun.liuNian.ganZhi)
                     ? result.currentYun.liuNian.ganZhi.join('')
                     : result.currentYun.liuNian.ganZhi}
                 </span>
-                <span className="text-xs text-gray-500 ml-2">
+                <span className="text-xs text-[var(--text-muted)] ml-2">
                   ({result.currentYun.liuNian.year}年 {result.currentYun.liuNian.age}岁)
                 </span>
               </div>
@@ -183,9 +183,9 @@ function Result() {
 
       {/* Analysis */}
       {result.analysis.XiYongShen && result.analysis.XiYongShen.length > 0 && (
-        <div className="bg-gray-800 rounded-lg p-4 mb-6">
-          <h3 className="text-sm text-gray-400 mb-2">喜用神</h3>
-          <div className="text-sm space-y-1">
+        <div className="panel-traditional p-4 mb-6">
+          <h3 className="text-xs text-gold/70 mb-2 font-heading tracking-wide-cn border-b border-bronze/20 pb-2">喜用神</h3>
+          <div className="text-sm space-y-1 text-[var(--text-secondary)]">
             {result.analysis.XiYongShen.map((s, i) => (
               <div key={i}>{typeof s === 'string' ? s : (s as any)?.judge || JSON.stringify(s)}</div>
             ))}
@@ -206,17 +206,17 @@ function Result() {
       </div>
 
       {/* AI Prompt Section */}
-      <div className="bg-gray-800 rounded-lg p-4 mb-6 border border-blue-900">
-        <h3 className="text-sm text-gray-400 mb-3">AI 命理分析 Prompt</h3>
-        <div className="flex gap-2 mb-3 flex-wrap">
+      <div className="panel-traditional p-5 mb-6 border-gold/30">
+        <h3 className="text-xs text-gold/70 mb-3 font-heading tracking-wide-cn border-b border-bronze/20 pb-2">AI 命理分析</h3>
+        <div className="flex gap-2 mb-4 flex-wrap">
           {getTemplateList().map(t => (
             <button
               key={t.key}
               onClick={() => setTemplate(t.key)}
-              className={`px-3 py-1 rounded text-xs transition-colors ${
+              className={`px-3 py-1 rounded-sm text-xs font-heading transition-colors ${
                 template === t.key
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  ? 'bg-gold/20 text-gold border border-gold/50'
+                  : 'bg-ink-700 text-[var(--text-secondary)] border border-bronze/20 hover:bg-ink-600 hover:text-parchment-100'
               }`}
             >
               {t.label}
@@ -225,11 +225,11 @@ function Result() {
         </div>
         <button
           onClick={handleCopyPrompt}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-500 rounded font-semibold transition-colors"
+          className="w-full py-3 btn-primary-cn rounded-sm font-heading tracking-traditional"
         >
           {copied ? '已复制到剪贴板 ✓' : '一键复制 Prompt'}
         </button>
-        <p className="text-xs text-gray-500 mt-2 text-center">
+        <p className="text-xs text-[var(--text-muted)] mt-3 text-center">
           复制后粘贴到 DeepSeek / ChatGPT / Claude 等 AI 对话中即可获得命理解读
         </p>
       </div>

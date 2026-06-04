@@ -6,11 +6,11 @@ interface Props {
 }
 
 const WU_XING_COLORS: Record<string, string> = {
-  '木': '#4ade80',
-  '火': '#f87171',
-  '土': '#fbbf24',
-  '金': '#e5e7eb',
-  '水': '#60a5fa',
+  '木': '#4a7c59',
+  '火': '#c23b22',
+  '土': '#b8860b',
+  '金': '#c0b283',
+  '水': '#2c4a6e',
 }
 
 export default function FiveElementRadar({ wuXingPower }: Props) {
@@ -28,32 +28,32 @@ export default function FiveElementRadar({ wuXingPower }: Props) {
       })),
       shape: 'polygon',
       splitNumber: 4,
-      axisName: { fontSize: 14, fontWeight: 'bold' },
-      splitArea: { areaStyle: { color: ['rgba(255,255,255,0.02)', 'rgba(255,255,255,0.05)'] } },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.15)' } },
+      axisName: { fontSize: 14, fontWeight: 'bold', fontFamily: 'KaiTi, STKaiti, serif' },
+      splitArea: { areaStyle: { color: ['rgba(201,168,76,0.02)', 'rgba(201,168,76,0.05)'] } },
+      splitLine: { lineStyle: { color: 'rgba(201,168,76,0.12)' } },
+      axisLine: { lineStyle: { color: 'rgba(201,168,76,0.2)' } },
     },
     series: [{
       type: 'radar',
       data: [{
         value: values,
         name: '五行力量',
-        areaStyle: { color: 'rgba(99, 162, 255, 0.2)' },
-        lineStyle: { color: '#63a2ff', width: 2 },
-        itemStyle: { color: '#63a2ff' },
+        areaStyle: { color: 'rgba(201, 168, 76, 0.15)' },
+        lineStyle: { color: '#c9a84c', width: 2 },
+        itemStyle: { color: '#c9a84c' },
       }],
     }],
   }
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4">
-      <h3 className="text-sm text-gray-400 mb-2">五行力量分布</h3>
+    <div className="panel-traditional p-4">
+      <h3 className="text-xs text-gold/70 mb-2 font-heading tracking-wide-cn">五行力量分布</h3>
       <ReactECharts option={option} style={{ height: 260 }} />
       <div className="flex justify-center gap-4 mt-2">
         {keys.map(k => (
-          <div key={k} className="flex items-center gap-1 text-xs">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: WU_XING_COLORS[k] }} />
-            <span>{k} {wuXingPower[k] || 0}</span>
+          <div key={k} className="flex items-center gap-1.5 text-xs">
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: WU_XING_COLORS[k] }} />
+            <span className="text-[var(--text-secondary)]">{k} {wuXingPower[k] || 0}</span>
           </div>
         ))}
       </div>

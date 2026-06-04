@@ -6,37 +6,34 @@ interface Props {
 }
 
 const WU_XING_BG: Record<string, string> = {
-  '木': 'bg-green-900/40 border-green-700',
-  '火': 'bg-red-900/40 border-red-700',
-  '土': 'bg-yellow-900/40 border-yellow-700',
-  '金': 'bg-gray-600/40 border-gray-500',
-  '水': 'bg-blue-900/40 border-blue-700',
+  '木': 'bg-wood/10 border-wood/40',
+  '火': 'bg-fire/10 border-fire/40',
+  '土': 'bg-earth/10 border-earth/40',
+  '金': 'bg-metal/10 border-metal/40',
+  '水': 'bg-water/10 border-water/40',
 }
 
 function getWuXingStyle(wuXing: string): string {
   const firstChar = wuXing?.charAt(0) || ''
-  return WU_XING_BG[firstChar] || 'bg-gray-700 border-gray-600'
+  return WU_XING_BG[firstChar] || 'bg-ink-700 border-bronze/30'
 }
 
 export default function PillarCard({ label, pillar }: Props) {
-  const ganWuXing = pillar.wuXing?.split('')?.[0] || ''
-  const zhiWuXing = pillar.wuXing?.split('')?.[1] || ''
-
   return (
-    <div className={`rounded-lg p-4 text-center border ${getWuXingStyle(pillar.wuXing)}`}>
-      <div className="text-xs text-gray-400 mb-2">{label}</div>
-      <div className="text-sm text-gray-500 mb-1">{pillar.shiShenGan || '—'}</div>
-      <div className="text-3xl font-bold mb-1">{pillar.gan}</div>
-      <div className="text-2xl text-gray-300 mb-1">{pillar.zhi}</div>
-      <div className="text-sm text-gray-500">{pillar.shiShenZhi || '—'}</div>
-      <div className="mt-2 text-xs text-gray-500">
+    <div className={`rounded-sm p-4 text-center border-2 corner-deco corner-deco-bottom ${getWuXingStyle(pillar.wuXing)}`}>
+      <div className="text-xs text-gold/70 mb-2 font-heading tracking-wide-cn">{label}</div>
+      <div className="text-xs text-[var(--text-tertiary)] mb-1">{pillar.shiShenGan || '—'}</div>
+      <div className="text-4xl font-bold mb-1 font-ganzhi text-parchment-100">{pillar.gan}</div>
+      <div className="text-2xl text-parchment-200 font-ganzhi mb-1">{pillar.zhi}</div>
+      <div className="text-xs text-[var(--text-tertiary)]">{pillar.shiShenZhi || '—'}</div>
+      <div className="mt-2 text-xs text-[var(--text-muted)]">
         <div>{pillar.naYin}</div>
-        <div className="mt-1">{pillar.diShi}</div>
+        <div className="mt-0.5">{pillar.diShi}</div>
       </div>
       {pillar.hideGanAttr && pillar.hideGanAttr.length > 0 && (
-        <div className="mt-2 text-xs text-gray-400 space-y-0.5">
+        <div className="mt-2 pt-2 border-t border-bronze/20 text-xs text-[var(--text-tertiary)] space-y-0.5">
           {pillar.hideGanAttr.map((h, i) => (
-            <div key={i}>{h.gan}({h.qiLevel}) {h.shiShen}</div>
+            <div key={i}>{h.gan}（{h.qiLevel}）{h.shiShen}</div>
           ))}
         </div>
       )}
