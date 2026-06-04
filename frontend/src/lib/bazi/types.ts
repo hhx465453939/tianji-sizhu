@@ -86,6 +86,15 @@ export interface BaziResult {
   ganRelations: any[]
   zhiRelations: any[]
 
+  // Shensha (神煞)
+  shensha: {
+    nian: string[]
+    yue: string[]
+    ri: string[]
+    shi: string[]
+    current?: { daYun: string[]; liuNian: string[]; liuYue: string[]; liuRi: string[] }
+  }
+
   // Analysis
   analysis: {
     rishi: string[]

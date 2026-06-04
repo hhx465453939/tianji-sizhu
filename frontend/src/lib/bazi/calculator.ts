@@ -70,6 +70,8 @@ export function calculateBazi(input: BaziInput): BaziResult {
     ganRelations: data.ganRelations || [],
     zhiRelations: data.zhiRelations || [],
 
+    shensha: data.shensha || { nian: [], yue: [], ri: [], shi: [] },
+
     analysis: data.analysis || { rishi: [], SanMingTongHui: [], XiYongShen: [] },
     yuanHaiZiping: data.yuanHaiZiping || { yueLing: null, taiSui: null, shenQiang: 0, shidu: 0 },
 

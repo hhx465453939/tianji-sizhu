@@ -146,6 +146,21 @@ ${result.zhiRelations.map((r: any) => typeof r === 'string' ? r : JSON.stringify
 `
   }
 
+  // Shensha (神煞)
+  if (result.shensha) {
+    const shenshaLines: string[] = []
+    if (result.shensha.nian?.length) shenshaLines.push(`年柱：${result.shensha.nian.join('、')}`)
+    if (result.shensha.yue?.length) shenshaLines.push(`月柱：${result.shensha.yue.join('、')}`)
+    if (result.shensha.ri?.length) shenshaLines.push(`日柱：${result.shensha.ri.join('、')}`)
+    if (result.shensha.shi?.length) shenshaLines.push(`时柱：${result.shensha.shi.join('、')}`)
+    if (shenshaLines.length > 0) {
+      prompt += `
+## 神煞
+${shenshaLines.join('\n')}
+`
+    }
+  }
+
   // Instructions
   prompt += `
 ---

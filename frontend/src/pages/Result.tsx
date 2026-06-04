@@ -7,6 +7,8 @@ import type { BaziResult, BaziInput } from '../lib/bazi/types'
 import PillarCard from '../components/PillarCard'
 import FiveElementRadar from '../components/FiveElementRadar'
 import DaYunTimeline from '../components/DaYunTimeline'
+import ShenshaPanel from '../components/ShenshaPanel'
+import RelationsPanel from '../components/RelationsPanel'
 
 function Result() {
   const location = useLocation()
@@ -185,24 +187,17 @@ function Result() {
         </div>
       )}
 
-      {/* Gan/Zhi Relations */}
-      {(result.ganRelations.length > 0 || result.zhiRelations.length > 0) && (
-        <div className="bg-gray-800 rounded-lg p-4 mb-6">
-          <h3 className="text-sm text-gray-400 mb-2">刑冲合害</h3>
-          {result.ganRelations.length > 0 && (
-            <div className="mb-2">
-              <span className="text-xs text-gray-500">天干：</span>
-              <span className="text-sm">{result.ganRelations.map(r => typeof r === 'string' ? r : JSON.stringify(r)).join(' | ')}</span>
-            </div>
-          )}
-          {result.zhiRelations.length > 0 && (
-            <div>
-              <span className="text-xs text-gray-500">地支：</span>
-              <span className="text-sm">{result.zhiRelations.map(r => typeof r === 'string' ? r : JSON.stringify(r)).join(' | ')}</span>
-            </div>
-          )}
+      {/* Shensha Panel */}
+      {result.shensha && (
+        <div className="mb-6">
+          <ShenshaPanel shensha={result.shensha} />
         </div>
       )}
+
+      {/* Relations Panel */}
+      <div className="mb-6">
+        <RelationsPanel ganRelations={result.ganRelations} zhiRelations={result.zhiRelations} />
+      </div>
 
       {/* AI Prompt Section */}
       <div className="bg-gray-800 rounded-lg p-4 mb-6 border border-blue-900">
