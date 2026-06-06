@@ -50,14 +50,6 @@ jobs:
           wails version || echo "WARN: wails not in PATH yet"
           which wails || echo "WARN: which wails failed"
 
-      - name: Install pnpm and frontend dependencies
-        shell: bash
-        run: |
-          npm install -g pnpm
-          pnpm config set node-linker hoisted
-          cd frontend
-          pnpm install
-
       - name: Build
         shell: bash
         run: |
@@ -111,13 +103,6 @@ jobs:
           echo "Go: $(go version)"
           echo "Node: $(node --version)"
           wails version
-
-      - name: Install pnpm and frontend dependencies
-        run: |
-          npm install -g pnpm
-          pnpm config set node-linker hoisted
-          cd frontend
-          pnpm install
 
       - name: Build
         run: |
@@ -174,13 +159,6 @@ jobs:
           echo "Go: $(go version)"
           echo "Node: $(node --version)"
           wails version
-
-      - name: Install pnpm and frontend dependencies
-        run: |
-          npm install -g pnpm
-          pnpm config set node-linker hoisted
-          cd frontend
-          pnpm install
 
       - name: Build
         run: |
