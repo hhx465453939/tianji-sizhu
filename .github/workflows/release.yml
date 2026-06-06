@@ -1,7 +1,5 @@
 # ============================================================
 # TianJi-SiZhu Release Pipeline
-# Triggers on version tag push (v*), builds for Win/Mac/Linux,
-# creates installers, and publishes a GitHub Release.
 # ============================================================
 name: Release
 
@@ -14,18 +12,13 @@ permissions:
   contents: write
 
 env:
-  WAILS_VERSION: "v2.12.0"
   GO_VERSION: "1.23"
   NODE_VERSION: "22"
   APP_NAME: "tianji-sizhu"
-  APP_DISPLAY_NAME: "TianJi-SiZhu"
 
 jobs:
-  # ──────────────────────────────────────────────
-  # Windows: NSIS Installer (.exe)
-  # ──────────────────────────────────────────────
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,52 +34,57 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+        shell: bash
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
-      - name: Install NSIS
-        run: choco install nsis -y
+      - name: Verify tools
+        shell: bash
+        run: |
+          echo "Go: $(go version)"
+          echo "Node: $(node --version)"
+          echo "npm: $(npm --version)"
+          echo "GOPATH: $(go env GOPATH)"
+          echo "PATH: $PATH"
+          wails version || echo "WARN: wails not in PATH yet"
+          which wails || echo "WARN: which wails failed"
 
       - name: Install frontend dependencies
+        shell: bash
         run: |
           cd frontend
-          npm install
+          npm ci || npm install
 
-      - name: Build Windows amd64
-        run: wails build -platform windows/amd64 -nsis -o ${{ env.APP_NAME }}.exe
+      - name: Build
+        shell: bash
+        run: |
+          wails build -platform windows/amd64 -nsis
+          echo "=== build/bin contents ==="
+          ls -la build/bin/ || echo "build/bin not found"
 
       - name: Find installer
         id: find
-        shell: pwsh
+        shell: bash
         run: |
-          $files = Get-ChildItem -Path build/bin -Filter "*installer*" -Recurse
-          if ($files.Count -eq 0) {
-            Write-Host "No installer found, listing build/bin:"
-            Get-ChildItem build/bin | Format-Table Name, Length
-            $files = Get-ChildItem -Path build/bin -Filter "*.exe" -Recurse
-          }
-          foreach ($f in $files) {
-            Write-Host "Found: $($f.FullName) ($([math]::Round($f.Length/1MB,2)) MB)"
-          }
-          $installer = $files | Where-Object { $_.Name -match "installer" } | Select-Object -First 1
-          if ($installer) {
-            echo "installer_path=$($installer.FullName)" >> $env:GITHUB_OUTPUT
-          } else {
-            $exe = $files | Select-Object -First 1
-            echo "installer_path=$($exe.FullName)" >> $env:GITHUB_OUTPUT
-          }
+          echo "=== Looking for installer ==="
+          find build/bin -type f -name "*.exe" | head -10
+          INSTALLER=$(find build/bin -type f -name "*installer*" | head -1)
+          if [ -z "$INSTALLER" ]; then
+            INSTALLER=$(find build/bin -type f -name "*.exe" | head -1)
+          fi
+          echo "installer_path=$INSTALLER" >> $GITHUB_OUTPUT
+          echo "Selected: $INSTALLER"
 
-      - name: Upload Windows installer
+      - name: Upload
+        if: steps.find.outputs.installer_path != ''
         uses: actions/upload-artifact@v4
         with:
           name: windows-installer
           path: ${{ steps.find.outputs.installer_path }}
-          if-no-files-found: error
 
-  # ──────────────────────────────────────────────
-  # macOS: Universal Binary DMG (.dmg)
-  # ──────────────────────────────────────────────
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-13
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -102,37 +100,45 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Verify tools
+        run: |
+          echo "Go: $(go version)"
+          echo "Node: $(node --version)"
+          wails version
 
       - name: Install frontend dependencies
         run: |
           cd frontend
-          npm install
+          npm ci || npm install
 
-      - name: Build macOS universal binary
-        run: wails build -platform darwin/universal -o ${{ env.APP_NAME }}
+      - name: Build
+        run: |
+          wails build -platform darwin/amd64
+          echo "=== build/bin contents ==="
+          ls -la build/bin/
 
       - name: Create DMG
         run: |
+          ls -la build/bin/
           mkdir -p dmg-staging
           cp -r "build/bin/${{ env.APP_NAME }}.app" dmg-staging/
           ln -s /Applications dmg-staging/Applications
           hdiutil create \
-            -volname "${{ env.APP_DISPLAY_NAME }}" \
+            -volname "TianJi-SiZhu" \
             -srcfolder dmg-staging \
             -ov -format UDZO \
-            "build/bin/${{ env.APP_NAME }}-darwin-universal.dmg"
+            "build/bin/${{ env.APP_NAME }}-darwin-amd64.dmg"
 
-      - name: Upload macOS DMG
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: macos-dmg
-          path: build/bin/${{ env.APP_NAME }}-darwin-universal.dmg
-          if-no-files-found: error
+          path: build/bin/${{ env.APP_NAME }}-darwin-amd64.dmg
 
-  # ──────────────────────────────────────────────
-  # Linux: AppImage (.AppImage) + tar.gz
-  # ──────────────────────────────────────────────
   build-linux:
     runs-on: ubuntu-22.04
     steps:
@@ -149,69 +155,45 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
-
-      - name: Install system dependencies
+      - name: Install system deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-3-dev \
-            libwebkit2gtk-4.0-dev \
-            build-essential \
-            pkg-config
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev build-essential pkg-config
+
+      - name: Install Wails CLI
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Verify tools
+        run: |
+          echo "Go: $(go version)"
+          echo "Node: $(node --version)"
+          wails version
 
       - name: Install frontend dependencies
         run: |
           cd frontend
-          npm install
+          npm ci || npm install
 
-      - name: Build Linux amd64
-        run: wails build -platform linux/amd64 -o ${{ env.APP_NAME }}
+      - name: Build
+        run: |
+          wails build -platform linux/amd64
+          echo "=== build/bin contents ==="
+          ls -la build/bin/
 
-      - name: Package as tar.gz
+      - name: Package tar.gz
         run: |
           cd build/bin
           tar czf "${{ env.APP_NAME }}-linux-amd64.tar.gz" "${{ env.APP_NAME }}"
 
-      - name: Create AppImage
-        run: |
-          APPDIR="build/AppDir"
-          mkdir -p "${APPDIR}/usr/bin"
-          mkdir -p "${APPDIR}/usr/share/applications"
-          mkdir -p "${APPDIR}/usr/share/icons/hicolor/256x256/apps"
-
-          cp "build/bin/${{ env.APP_NAME }}" "${APPDIR}/usr/bin/${{ env.APP_NAME }}"
-          chmod +x "${APPDIR}/usr/bin/${{ env.APP_NAME }}"
-
-          printf '[Desktop Entry]\nName=%s\nExec=%s\nIcon=%s\nType=Application\nCategories=Utility;\n' \
-            "${{ env.APP_DISPLAY_NAME }}" "${{ env.APP_NAME }}" "${{ env.APP_NAME }}" \
-            > "${APPDIR}/usr/share/applications/${{ env.APP_NAME }}.desktop"
-
-          if [ -f "build/appicon.png" ]; then
-            cp "build/appicon.png" "${APPDIR}/usr/share/icons/hicolor/256x256/apps/${{ env.APP_NAME }}.png"
-            cp "build/appicon.png" "${APPDIR}/${{ env.APP_NAME }}.png"
-          fi
-
-          ln -s "usr/bin/${{ env.APP_NAME }}" "${APPDIR}/AppRun"
-
-          wget -q "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage" -O linuxdeploy
-          chmod +x linuxdeploy
-          ./linuxdeploy --appdir "${APPDIR}" --output appimage
-          mv ./*.AppImage "build/bin/${{ env.APP_NAME }}-linux-amd64.AppImage"
-
-      - name: Upload Linux artifacts
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: linux-packages
+          name: linux-binary
           path: |
             build/bin/${{ env.APP_NAME }}-linux-amd64.tar.gz
-            build/bin/${{ env.APP_NAME }}-linux-amd64.AppImage
-          if-no-files-found: warn
 
-  # ──────────────────────────────────────────────
-  # Publish GitHub Release
-  # ──────────────────────────────────────────────
   publish-release:
     needs: [build-windows, build-macos, build-linux]
     if: always() && !cancelled()
@@ -232,33 +214,24 @@ jobs:
 
       - name: Generate changelog
         run: |
-          TAG_NAME="${GITHUB_REF#refs/tags/}"
-          PREV_TAG=$(git tag --sort=-v:refname | grep '^v' | sed -n '2p')
-          if [ -z "$PREV_TAG" ]; then
+          TAG="${GITHUB_REF#refs/tags/}"
+          PREV=$(git tag --sort=-v:refname | grep '^v' | sed -n '2p')
+          if [ -z "$PREV" ]; then
             CHANGES=$(git log --oneline --no-decorate | head -50)
           else
-            CHANGES=$(git log --oneline --no-decorate "${PREV_TAG}..HEAD")
+            CHANGES=$(git log --oneline --no-decorate "${PREV}..HEAD")
           fi
           {
-            echo "## TianJi-SiZhu ${TAG_NAME}"
+            echo "## TianJi-SiZhu ${TAG}"
             echo ""
-            echo "Open-source BaZi (Four Pillars) desktop client, built for AI-powered analysis."
-            echo ""
-            echo "### Features"
-            echo "- Four Pillars, Ten Gods, Five Elements, Da Yun, Liu Nian, Shen Sha"
-            echo "- Data visualization: Five Element radar, Da Yun timeline"
-            echo "- Local SQLite storage, offline ready"
-            echo "- One-click structured AI Prompt generation"
-            echo "- Ancient Chinese aesthetic theme"
-            echo "- Lightweight native app based on Wails v2"
+            echo "Open-source BaZi desktop client."
             echo ""
             echo "### Downloads"
-            echo "| Platform | File | Description |"
-            echo "|----------|------|-------------|"
-            echo "| Windows | tianji-sizhu-*-installer.exe | NSIS installer |"
-            echo "| macOS | tianji-sizhu-darwin-universal.dmg | Intel + Apple Silicon |"
-            echo "| Linux | tianji-sizhu-linux-amd64.AppImage | Portable |"
-            echo "| Linux | tianji-sizhu-linux-amd64.tar.gz | Archive |"
+            echo "| Platform | File |"
+            echo "|----------|------|"
+            echo "| Windows | *.exe |"
+            echo "| macOS | *.dmg |"
+            echo "| Linux | *.tar.gz |"
             echo ""
             echo "### Commits"
             echo "$CHANGES"
@@ -275,7 +248,6 @@ jobs:
           files: |
             release-assets/**/*.exe
             release-assets/**/*.dmg
-            release-assets/**/*.AppImage
             release-assets/**/*.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
