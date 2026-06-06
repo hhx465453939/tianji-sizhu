@@ -50,11 +50,12 @@ jobs:
           wails version || echo "WARN: wails not in PATH yet"
           which wails || echo "WARN: which wails failed"
 
-      - name: Install frontend dependencies
+      - name: Install pnpm and frontend dependencies
         shell: bash
         run: |
+          npm install -g pnpm
           cd frontend
-          npm ci || npm install
+          pnpm install || npm install
 
       - name: Build
         shell: bash
@@ -110,10 +111,11 @@ jobs:
           echo "Node: $(node --version)"
           wails version
 
-      - name: Install frontend dependencies
+      - name: Install pnpm and frontend dependencies
         run: |
+          npm install -g pnpm
           cd frontend
-          npm ci || npm install
+          pnpm install || npm install
 
       - name: Build
         run: |
@@ -171,10 +173,11 @@ jobs:
           echo "Node: $(node --version)"
           wails version
 
-      - name: Install frontend dependencies
+      - name: Install pnpm and frontend dependencies
         run: |
+          npm install -g pnpm
           cd frontend
-          npm ci || npm install
+          pnpm install || npm install
 
       - name: Build
         run: |
