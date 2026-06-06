@@ -1,28 +1,35 @@
-# Go
+# ── Build artifacts ─────────────────────────
 /build/
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+*.AppImage
+*.dmg
+*.tar.gz
+*.msi
+*.deb
+*.rpm
 
-# Frontend
+# ── Frontend ───────────────────────────────
 frontend/node_modules/
 frontend/dist/
+frontend/package-lock.json   # project uses pnpm
 
-# IDE
+# ── IDE ────────────────────────────────────
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# OS
+# ── OS ─────────────────────────────────────
 .DS_Store
 Thumbs.db
 
-# Database
+# ── Database ───────────────────────────────
 *.db
 
-# Temp
+# ── Temp ───────────────────────────────────
 /tmp/
 frontend/package.json.md5

@@ -20,6 +20,17 @@
 - **可视化**: ECharts
 - **存储**: SQLite (modernc.org/sqlite)
 
+## 下载
+
+前往 [Releases](https://github.com/hhx465453939/tianji-sizhu/releases) 页面下载对应平台的安装包：
+
+| 平台 | 文件 | 说明 |
+|------|------|------|
+| Windows | `tianji-sizhu-amd64-installer.exe` | NSIS 安装程序 |
+| macOS | `tianji-sizhu-darwin-universal.dmg` | Intel + Apple Silicon 通用 |
+| Linux | `tianji-sizhu-linux-amd64.AppImage` | 便携版，免安装 |
+| Linux | `tianji-sizhu-linux-amd64.tar.gz` | 压缩包 |
+
 ## 开发
 
 ```bash
@@ -31,6 +42,22 @@ wails dev
 
 # 生产构建 (Windows x64)
 wails build -platform windows/amd64
+
+# 本地打包 (含 NSIS 安装程序)
+build.cmd --installer                  # Windows (推荐，免执行策略)
+.\scripts\build.ps1 -Installer         # Windows PowerShell
+./scripts/build.sh                     # macOS / Linux
+```
+
+### 发布 Release
+
+```powershell
+# 创建 v1.0.0 标签并触发 GitHub Actions 自动构建发布
+.\scripts\create-release.ps1                   # Windows
+./scripts/create-release.sh                    # macOS / Linux
+
+# 指定版本号
+.\scripts\create-release.ps1 -Version 1.1.0
 ```
 
 ## 环境要求
@@ -39,6 +66,7 @@ wails build -platform windows/amd64
 - Node.js 18+
 - pnpm
 - Wails CLI v2
+- (可选) NSIS — 用于构建 Windows 安装程序
 
 ## 致谢
 

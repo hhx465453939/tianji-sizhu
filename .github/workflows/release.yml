@@ -1,0 +1,286 @@
+# ============================================================
+# TianJi-SiZhu Release Pipeline
+# Triggers on version tag push (v*), builds for Win/Mac/Linux,
+# creates installers, and publishes a GitHub Release.
+# ============================================================
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  WAILS_VERSION: "v2.12.0"
+  GO_VERSION: "1.23"
+  NODE_VERSION: "20"
+  APP_NAME: "tianji-sizhu"
+  APP_DISPLAY_NAME: "天机四柱"
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Windows: NSIS Installer (.exe)
+  # ──────────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+
+      - name: Install NSIS
+        run: choco install nsis -y
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          pnpm install --prefer-offline || npm install
+
+      - name: Build Windows amd64 with NSIS
+        run: wails build -platform windows/amd64 -nsis -o ${{ env.APP_NAME }}.exe
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: build/bin/${{ env.APP_NAME }}-amd64-installer.exe
+          if-no-files-found: error
+
+  # ──────────────────────────────────────────────
+  # macOS: Universal Binary DMG (.dmg)
+  # ──────────────────────────────────────────────
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          pnpm install --prefer-offline || npm install
+
+      - name: Build macOS universal binary
+        run: wails build -platform darwin/universal -o ${{ env.APP_NAME }}
+
+      - name: Create DMG
+        run: |
+          # Create a temporary directory for DMG contents
+          mkdir -p dmg-staging
+          cp -r "build/bin/${{ env.APP_NAME }}.app" dmg-staging/
+
+          # Create symlink to /Applications for drag-install
+          ln -s /Applications dmg-staging/Applications
+
+          # Create DMG
+          hdiutil create \
+            -volname "${{ env.APP_DISPLAY_NAME }}" \
+            -srcfolder dmg-staging \
+            -ov -format UDZO \
+            "build/bin/${{ env.APP_NAME }}-darwin-universal.dmg"
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: build/bin/${{ env.APP_NAME }}-darwin-universal.dmg
+          if-no-files-found: error
+
+  # ──────────────────────────────────────────────
+  # Linux: AppImage (.AppImage) + tar.gz
+  # ──────────────────────────────────────────────
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            build-essential \
+            pkg-config
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          pnpm install --prefer-offline || npm install
+
+      - name: Build Linux amd64
+        run: wails build -platform linux/amd64 -o ${{ env.APP_NAME }}
+
+      - name: Package as tar.gz
+        run: |
+          cd build/bin
+          tar czf "${{ env.APP_NAME }}-linux-amd64.tar.gz" "${{ env.APP_NAME }}"
+
+      - name: Create AppImage
+        run: |
+          # Create AppDir structure
+          APPDIR="build/AppDir"
+          mkdir -p "${APPDIR}/usr/bin"
+          mkdir -p "${APPDIR}/usr/share/applications"
+          mkdir -p "${APPDIR}/usr/share/icons/hicolor/256x256/apps"
+
+          # Copy binary
+          cp "build/bin/${{ env.APP_NAME }}" "${APPDIR}/usr/bin/${{ env.APP_NAME }}"
+          chmod +x "${APPDIR}/usr/bin/${{ env.APP_NAME }}"
+
+          # Create .desktop file
+          cat > "${APPDIR}/usr/share/applications/${{ env.APP_NAME }}.desktop" << EOF
+          [Desktop Entry]
+          Name=${{ env.APP_DISPLAY_NAME }}
+          Exec=${{ env.APP_NAME }}
+          Icon=${{ env.APP_NAME }}
+          Type=Application
+          Categories=Utility;
+          EOF
+
+          # Copy icon if exists, otherwise create a placeholder
+          if [ -f "build/appicon.png" ]; then
+            cp "build/appicon.png" "${APPDIR}/usr/share/icons/hicolor/256x256/apps/${{ env.APP_NAME }}.png"
+            cp "build/appicon.png" "${APPDIR}/${{ env.APP_NAME }}.png"
+          fi
+
+          # Create AppRun symlink
+          ln -s "usr/bin/${{ env.APP_NAME }}" "${APPDIR}/AppRun"
+
+          # Download linuxdeploy and create AppImage
+          wget -q "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage" -O linuxdeploy
+          chmod +x linuxdeploy
+          ./linuxdeploy --appdir "${APPDIR}" --output appimage
+          mv ./*.AppImage "build/bin/${{ env.APP_NAME }}-linux-amd64.AppImage"
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: |
+            build/bin/${{ env.APP_NAME }}-linux-amd64.tar.gz
+            build/bin/${{ env.APP_NAME }}-linux-amd64.AppImage
+          if-no-files-found: error
+
+  # ──────────────────────────────────────────────
+  # Publish GitHub Release
+  # ──────────────────────────────────────────────
+  publish-release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: List release assets
+        run: find release-assets -type f | sort
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          PREV_TAG=$(git tag --sort=-v:refname | grep '^v' | sed -n '2p')
+
+          if [ -z "$PREV_TAG" ]; then
+            CHANGES=$(git log --oneline --no-decorate | head -50)
+          else
+            CHANGES=$(git log --oneline --no-decorate "${PREV_TAG}..HEAD")
+          fi
+
+          cat > changelog.md << EOF
+          ## 🎉 天机四柱 ${TAG_NAME} — 正式版本
+
+          开源四柱排盘桌面客户端，为 AI 解读而生。
+
+          ### ✨ 功能特性
+          - **完整排盘**: 四柱、十神、五行、大运、流年、神煞
+          - **数据可视化**: 五行雷达图、大运时间轴、关系连线图
+          - **本地存储**: SQLite 嵌入式数据库，离线可用
+          - **AI Prompt 生成**: 一键生成结构化命理分析提示词
+          - **古朴国风**: 中式美学主题设计
+          - **轻量原生**: 基于 Wails v2，安装包小巧
+
+          ### 📦 下载说明
+          | 平台 | 文件 | 说明 |
+          |------|------|------|
+          | Windows | \`tianji-sizhu-amd64-installer.exe\` | NSIS 安装程序 |
+          | macOS | \`tianji-sizhu-darwin-universal.dmg\` | Intel + Apple Silicon 通用 |
+          | Linux | \`tianji-sizhu-linux-amd64.AppImage\` | 便携版，免安装 |
+          | Linux | \`tianji-sizhu-linux-amd64.tar.gz\` | 压缩包 |
+
+          ### 📝 Commit 历史
+          ${CHANGES}
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "天机四柱 ${{ github.ref_name }}"
+          body_path: changelog.md
+          draft: false
+          prerelease: false
+          files: |
+            release-assets/**/*.exe
+            release-assets/**/*.dmg
+            release-assets/**/*.AppImage
+            release-assets/**/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
