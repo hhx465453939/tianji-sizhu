@@ -99,14 +99,9 @@ jobs:
 
       - name: Create DMG
         run: |
-          # Create a temporary directory for DMG contents
           mkdir -p dmg-staging
           cp -r "build/bin/${{ env.APP_NAME }}.app" dmg-staging/
-
-          # Create symlink to /Applications for drag-install
           ln -s /Applications dmg-staging/Applications
-
-          # Create DMG
           hdiutil create \
             -volname "${{ env.APP_DISPLAY_NAME }}" \
             -srcfolder dmg-staging \
@@ -169,36 +164,25 @@ jobs:
 
       - name: Create AppImage
         run: |
-          # Create AppDir structure
           APPDIR="build/AppDir"
           mkdir -p "${APPDIR}/usr/bin"
           mkdir -p "${APPDIR}/usr/share/applications"
           mkdir -p "${APPDIR}/usr/share/icons/hicolor/256x256/apps"
 
-          # Copy binary
           cp "build/bin/${{ env.APP_NAME }}" "${APPDIR}/usr/bin/${{ env.APP_NAME }}"
           chmod +x "${APPDIR}/usr/bin/${{ env.APP_NAME }}"
 
-          # Create .desktop file
-          cat > "${APPDIR}/usr/share/applications/${{ env.APP_NAME }}.desktop" << EOF
-          [Desktop Entry]
-          Name=${{ env.APP_DISPLAY_NAME }}
-          Exec=${{ env.APP_NAME }}
-          Icon=${{ env.APP_NAME }}
-          Type=Application
-          Categories=Utility;
-          EOF
+          printf '[Desktop Entry]\nName=%s\nExec=%s\nIcon=%s\nType=Application\nCategories=Utility;\n' \
+            "${{ env.APP_DISPLAY_NAME }}" "${{ env.APP_NAME }}" "${{ env.APP_NAME }}" \
+            > "${APPDIR}/usr/share/applications/${{ env.APP_NAME }}.desktop"
 
-          # Copy icon if exists, otherwise create a placeholder
           if [ -f "build/appicon.png" ]; then
             cp "build/appicon.png" "${APPDIR}/usr/share/icons/hicolor/256x256/apps/${{ env.APP_NAME }}.png"
             cp "build/appicon.png" "${APPDIR}/${{ env.APP_NAME }}.png"
           fi
 
-          # Create AppRun symlink
           ln -s "usr/bin/${{ env.APP_NAME }}" "${APPDIR}/AppRun"
 
-          # Download linuxdeploy and create AppImage
           wget -q "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage" -O linuxdeploy
           chmod +x linuxdeploy
           ./linuxdeploy --appdir "${APPDIR}" --output appimage
@@ -238,42 +222,40 @@ jobs:
         run: |
           TAG_NAME="${GITHUB_REF#refs/tags/}"
           PREV_TAG=$(git tag --sort=-v:refname | grep '^v' | sed -n '2p')
-
           if [ -z "$PREV_TAG" ]; then
             CHANGES=$(git log --oneline --no-decorate | head -50)
           else
             CHANGES=$(git log --oneline --no-decorate "${PREV_TAG}..HEAD")
           fi
-
-          cat > changelog.md << EOF
-          ## 🎉 天机四柱 ${TAG_NAME} — 正式版本
-
-          开源四柱排盘桌面客户端，为 AI 解读而生。
-
-          ### ✨ 功能特性
-          - **完整排盘**: 四柱、十神、五行、大运、流年、神煞
-          - **数据可视化**: 五行雷达图、大运时间轴、关系连线图
-          - **本地存储**: SQLite 嵌入式数据库，离线可用
-          - **AI Prompt 生成**: 一键生成结构化命理分析提示词
-          - **古朴国风**: 中式美学主题设计
-          - **轻量原生**: 基于 Wails v2，安装包小巧
-
-          ### 📦 下载说明
-          | 平台 | 文件 | 说明 |
-          |------|------|------|
-          | Windows | \`tianji-sizhu-amd64-installer.exe\` | NSIS 安装程序 |
-          | macOS | \`tianji-sizhu-darwin-universal.dmg\` | Intel + Apple Silicon 通用 |
-          | Linux | \`tianji-sizhu-linux-amd64.AppImage\` | 便携版，免安装 |
-          | Linux | \`tianji-sizhu-linux-amd64.tar.gz\` | 压缩包 |
-
-          ### 📝 Commit 历史
-          ${CHANGES}
-          EOF
+          {
+            echo "## TianJi-SiZhu ${TAG_NAME}"
+            echo ""
+            echo "Open-source BaZi (Four Pillars) desktop client, built for AI-powered analysis."
+            echo ""
+            echo "### Features"
+            echo "- Four Pillars, Ten Gods, Five Elements, Da Yun, Liu Nian, Shen Sha"
+            echo "- Data visualization: Five Element radar, Da Yun timeline"
+            echo "- Local SQLite storage, offline ready"
+            echo "- One-click structured AI Prompt generation"
+            echo "- Ancient Chinese aesthetic theme"
+            echo "- Lightweight native app based on Wails v2"
+            echo ""
+            echo "### Downloads"
+            echo "| Platform | File | Description |"
+            echo "|----------|------|-------------|"
+            echo "| Windows | tianji-sizhu-amd64-installer.exe | NSIS installer |"
+            echo "| macOS | tianji-sizhu-darwin-universal.dmg | Intel + Apple Silicon |"
+            echo "| Linux | tianji-sizhu-linux-amd64.AppImage | Portable |"
+            echo "| Linux | tianji-sizhu-linux-amd64.tar.gz | Archive |"
+            echo ""
+            echo "### Commits"
+            echo "$CHANGES"
+          } > changelog.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "天机四柱 ${{ github.ref_name }}"
+          name: "TianJi-SiZhu ${{ github.ref_name }}"
           body_path: changelog.md
           draft: false
           prerelease: false
