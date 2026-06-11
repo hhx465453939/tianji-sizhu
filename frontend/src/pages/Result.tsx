@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useEffect, useState, useMemo } from 'react'
-import { calculateBazi } from '../lib/bazi/calculator'
+import { useEffect, useState, useMemo, useCallback } from 'react'
+import { calculateBazi, calculateShenshaForDate } from '../lib/bazi/calculator'
 import { generatePrompt, getTemplateList } from '../lib/prompt/generator'
 import type { PromptTemplate } from '../lib/prompt/generator'
 import type { BaziResult, BaziInput, DaYunItem } from '../lib/bazi/types'
@@ -8,6 +8,7 @@ import PillarCard from '../components/PillarCard'
 import FiveElementRadar from '../components/FiveElementRadar'
 import DaYunTimeline from '../components/DaYunTimeline'
 import LiuNianList from '../components/LiuNianList'
+import LiuYuePanel from '../components/LiuYuePanel'
 import ShenshaPanel from '../components/ShenshaPanel'
 import RelationsPanel from '../components/RelationsPanel'
 
@@ -22,6 +23,12 @@ function Result() {
   // DaYun / LiuNian selection state
   const [selectedDaYunYear, setSelectedDaYunYear] = useState<number | undefined>(undefined)
   const [selectedLiuNianYear, setSelectedLiuNianYear] = useState<number | undefined>(undefined)
+
+  // Shensha data for the selected LiuNian (dynamically calculated)
+  const [liunianShensha, setLiunianShensha] = useState<{
+    shensha: BaziResult['shensha']
+    currentYun: BaziResult['currentYun']
+  } | null>(null)
 
   const input = location.state as BaziInput | null
 
@@ -61,31 +68,50 @@ function Result() {
     return selectedDaYun.liunianArr.find(ln => ln.year === currentYear) || null
   }, [selectedDaYun, selectedLiuNianYear])
 
-  // Build shensha for the selected DaYun + LiuNian
+  // When selectedLiuNianYear changes, recalculate shensha for that year
+  useEffect(() => {
+    if (!input || !result) return
+    const targetYear = selectedLiuNianYear ?? new Date().getFullYear()
+    try {
+      const data = calculateShenshaForDate(input, targetYear)
+      setLiunianShensha(data)
+    } catch (e) {
+      console.error('Failed to calculate shensha for year', targetYear, e)
+      setLiunianShensha(null)
+    }
+  }, [input, result, selectedLiuNianYear])
+
+  // Build the complete shensha display: pillar shensha + current period shensha
   const displayShensha = useMemo(() => {
     if (!result?.shensha) return undefined
     const base = { ...result.shensha }
 
-    // If user selected a non-current DaYun, clear the current shensha
-    // (we only have shensha data for the current period from the library)
+    // If we have dynamic liunian shensha, use its current shensha
+    if (liunianShensha?.shensha?.current) {
+      return { ...base, current: liunianShensha.shensha.current }
+    }
+
+    // Fallback: for current period, use original data; for non-current, no current shensha
     const effectiveDaYunYear = selectedDaYunYear ?? currentDaYunStart
     if (effectiveDaYunYear !== currentDaYunStart) {
-      // For non-current DaYun, we don't have shensha from the library
-      // Show only the pillar shensha (which are always available)
       return { ...base, current: undefined }
     }
 
     return base
-  }, [result?.shensha, selectedDaYunYear, currentDaYunStart])
+  }, [result?.shensha, liunianShensha, selectedDaYunYear, currentDaYunStart])
 
-  const handleDaYunSelect = (startYear: number) => {
+  // Extract liuYue data from dynamic calculation
+  const displayLiuYue = liunianShensha?.currentYun?.liuYue || null
+  const displayLiuYueShensha = liunianShensha?.shensha?.current?.liuYue
+
+  const handleDaYunSelect = useCallback((startYear: number) => {
     setSelectedDaYunYear(startYear)
     setSelectedLiuNianYear(undefined) // reset liunian when dayun changes
-  }
+  }, [])
 
-  const handleLiuNianSelect = (year: number) => {
+  const handleLiuNianSelect = useCallback((year: number) => {
     setSelectedLiuNianYear(year)
-  }
+  }, [])
 
   const handleCopyPrompt = async () => {
     if (!result || !input) return
@@ -159,8 +185,6 @@ function Result() {
 
   if (!result) return <div className="p-8 text-center text-[var(--text-secondary)]">计算中...</div>
 
-  // Determine which DaYun/LiuNian info to show in the "当前运势" section
-  const effectiveDaYun = selectedDaYun || (result.currentYun?.daYun ? { startYear: result.currentYun.daYun.startYear, ganZhi: result.currentYun.daYun.ganZhi, endYear: result.currentYun.daYun.endYear } : null)
   const isViewingCurrent = (selectedDaYunYear ?? currentDaYunStart) === currentDaYunStart
 
   return (
@@ -284,6 +308,33 @@ function Result() {
               </div>
             )}
           </div>
+
+          {/* DaYun & LiuNian Shensha inline */}
+          {displayShensha?.current && (
+            <div className="mt-3 border-t border-bronze/20 pt-3">
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {displayShensha.current.daYun?.map((s, i) => (
+                  <span key={`dy-${i}`} className="px-2 py-0.5 rounded-sm text-xs border-2 border-gold/40 bg-gold/10 text-gold font-heading">
+                    大运·{s}
+                  </span>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {displayShensha.current.liuNian?.map((s, i) => (
+                  <span key={`ln-${i}`} className="px-2 py-0.5 rounded-sm text-xs border-2 border-jade/40 bg-jade/10 text-jade-light font-heading">
+                    流年·{s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* LiuYue Panel - show when a LiuNian is selected */}
+      {selectedLiuNian && (
+        <div className="mb-6">
+          <LiuYuePanel liuYue={displayLiuYue} liuYueShensha={displayLiuYueShensha} />
         </div>
       )}
 
@@ -299,7 +350,7 @@ function Result() {
         </div>
       )}
 
-      {/* Shensha Panel */}
+      {/* Shensha Panel - pillar shensha (always shown) */}
       {displayShensha && (
         <div className="mb-6">
           <ShenshaPanel shensha={displayShensha} />

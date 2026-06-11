@@ -1,11 +1,47 @@
 import mystilight from 'mystilight-8char'
-import type { BaziResult, BaziInput } from './types'
+import type { BaziResult, BaziInput, DaYunItem } from './types'
 
 const { getCurrentEightCharJSON } = mystilight as any
 
 const HOUR_TO_TIME: Record<number, number> = {
   0: 23, 1: 1, 2: 3, 3: 5, 4: 7, 5: 9,
   6: 11, 7: 13, 8: 15, 9: 17, 10: 19, 11: 21,
+}
+
+/**
+ * Calculate shensha for a specific target year/month.
+ * Re-runs the bazi calculation with currentYear/currentMonth set to the target date,
+ * returning the shensha and currentYun data for that period.
+ */
+export function calculateShenshaForDate(
+  input: BaziInput,
+  targetYear: number,
+  targetMonth?: number,
+  targetDay?: number,
+): {
+  shensha: BaziResult['shensha']
+  currentYun: BaziResult['currentYun']
+} {
+  const hour = HOUR_TO_TIME[input.hour] ?? 0
+  const now = new Date()
+  const data = getCurrentEightCharJSON({
+    year: input.year,
+    month: input.month,
+    day: input.day,
+    hour: hour,
+    minute: 0,
+    second: 0,
+    gender: input.gender === 0 ? 1 : 0,
+    sect: 2,
+    currentYear: targetYear,
+    currentMonth: targetMonth ?? (now.getMonth() + 1),
+    currentDay: targetDay ?? now.getDate(),
+  })
+
+  return {
+    shensha: data.shensha || { nian: [], yue: [], ri: [], shi: [] },
+    currentYun: data.currentYun || { daYun: null, liuNian: null, xiaoYun: null },
+  }
 }
 
 export function calculateBazi(input: BaziInput): BaziResult {
