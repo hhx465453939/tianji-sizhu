@@ -15,7 +15,8 @@
 # ── Frontend ───────────────────────────────
 frontend/node_modules/
 frontend/dist/
-frontend/package-lock.json   # project uses pnpm
+# project uses pnpm
+frontend/package-lock.json
 
 # ── IDE ────────────────────────────────────
 .idea/
@@ -32,4 +33,5 @@ Thumbs.db
 
 # ── Temp ───────────────────────────────────
 /tmp/
+cache/
 frontend/package.json.md5

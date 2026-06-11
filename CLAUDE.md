@@ -76,3 +76,14 @@ wails dev
 # 生产构建
 wails build -platform windows/amd64
 ```
+## 未来发布新版本的流程
+
+### 1. 改代码、提交
+git add . && git commit -m "feat: xxx"
+
+### 2. 更新版本号（手动改 package.json 和 SPEC.md）
+### 3. 提交版本号 + 打 tag + push
+git tag -a v1.1.0 -m "Release v1.1.0"
+git push origin main --tags
+
+### → GitHub Actions 自动构建 + 发布到 Releases
