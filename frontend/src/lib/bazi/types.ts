@@ -12,6 +12,10 @@ export interface BaziPillar {
   xun: string
   xunKong: string
   hideGanAttr: { gan: string; qiLevel: string; wuXing: string; shiShen: string }[]
+  /** Self-sitting 12-life-cycle position */
+  ziZuo?: string
+  /** Fortune-branch 12-life-cycle position */
+  xingYunZhi?: string
 }
 
 export interface DaYunItem {
@@ -75,6 +79,7 @@ export interface BaziResult {
     startYear: number
     startMonth: number
     startDay: number
+    startHour: number
     startSolar: string
   }
   dayunArr: DaYunItem[]
@@ -109,6 +114,17 @@ export interface BaziResult {
     shenQiang: any
     shidu: any
   }
+
+  // ── NEW: Extended analysis data ──
+
+  /** Spouse appearance analysis */
+  spouseAppearance?: any
+  /** Family background analysis */
+  familyBackground?: any
+  /** Self appearance analysis */
+  selfAppearance?: any
+  /** Education and talent analysis */
+  educationAndTalent?: any
 
   // Raw data for export
   rawData: any

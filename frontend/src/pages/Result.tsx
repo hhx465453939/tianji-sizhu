@@ -290,10 +290,10 @@ function Result() {
         <div className="panel-traditional p-4">
           <h3 className="text-xs text-gold/70 mb-2 font-heading tracking-wide-cn border-b border-bronze/20 pb-2">特殊宫位</h3>
           <div className="grid grid-cols-2 gap-2 text-sm text-[var(--text-secondary)]">
-            <div>胎元：{result.taiYuan}</div>
-            <div>命宫：{result.mingGong}</div>
-            <div>胎息：{result.taiXi}</div>
-            <div>身宫：{result.shenGong}</div>
+            <div>胎元：{result.taiYuan}（{result.taiYuanNaYin}）</div>
+            <div>命宫：{result.mingGong}（{result.mingGongNaYin}）</div>
+            <div>胎息：{result.taiXi}（{result.taiXiNaYin}）</div>
+            <div>身宫：{result.shenGong}（{result.shenGongNaYin}）</div>
           </div>
         </div>
       </div>
@@ -302,6 +302,27 @@ function Result() {
       <div className="mb-6">
         <FiveElementRadar wuXingPower={result.wuXingPower} />
       </div>
+
+      {/* Fortune start info */}
+      {result.yunInfo.startSolar && (
+        <div className="panel-traditional p-4 mb-6">
+          <h3 className="text-xs text-gold/70 mb-2 font-heading tracking-wide-cn border-b border-bronze/20 pb-2">起运信息</h3>
+          <div className="grid grid-cols-3 gap-4 text-sm text-[var(--text-secondary)]">
+            <div>
+              <span className="text-[var(--text-muted)]">排盘方式：</span>
+              <span className="text-parchment-100">{result.yunInfo.forward ? '顺排' : '逆排'}</span>
+            </div>
+            <div>
+              <span className="text-[var(--text-muted)]">起运年龄：</span>
+              <span className="text-parchment-100">{result.yunInfo.startYear}岁{result.yunInfo.startMonth ? ` ${result.yunInfo.startMonth}个月` : ''}</span>
+            </div>
+            <div>
+              <span className="text-[var(--text-muted)]">起运时间：</span>
+              <span className="text-parchment-100">{result.yunInfo.startSolar}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* DaYun Timeline (clickable) */}
       <div className="mb-6">

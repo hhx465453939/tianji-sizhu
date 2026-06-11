@@ -190,6 +190,7 @@ export function calculateBazi(input: BaziInput): BaziResult {
       startYear: data.yun.startYear,
       startMonth: data.yun.startMonth,
       startDay: data.yun.startDay,
+      startHour: data.yun.startHour ?? 0,
       startSolar: data.yun.startSolar,
     },
     dayunArr: data.dayunArr || [],
@@ -203,6 +204,12 @@ export function calculateBazi(input: BaziInput): BaziResult {
 
     analysis: data.analysis || { rishi: [], SanMingTongHui: [], XiYongShen: [] },
     yuanHaiZiping: data.yuanHaiZiping || { yueLing: null, taiSui: null, shenQiang: 0, shidu: 0 },
+
+    // Extended analysis data
+    spouseAppearance: data.spouseAppearance || null,
+    familyBackground: data.familyBackground || null,
+    selfAppearance: data.selfAppearance || null,
+    educationAndTalent: data.educationAndTalent || null,
 
     rawData: data,
   }
@@ -220,6 +227,8 @@ function mapPillar(p: any) {
     diShi: Array.isArray(p.diShi) ? p.diShi.join('/') : (p.diShi || ''),
     xun: p.xun || '',
     xunKong: p.xunKong || '',
+    ziZuo: p.ziZuo || '',
+    xingYunZhi: p.xingYunZhi || '',
     hideGanAttr: (p.hideGanAttr || []).map((h: any) => ({
       gan: h.gan || '',
       qiLevel: h.qiLevel || '',
