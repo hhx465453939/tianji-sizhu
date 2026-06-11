@@ -1,4 +1,5 @@
 import type { LiuYueItem } from '../lib/bazi/calculator'
+import { getNaYin } from '../lib/bazi/calculator'
 
 interface Props {
   liuYueArr: LiuYueItem[]
@@ -45,7 +46,8 @@ export default function LiuYuePanel({ liuYueArr, selectedMonth, onSelectMonth, t
               }`}
             >
               <div className="text-sm font-bold font-ganzhi">{my.ganZhi}</div>
-              <div className="text-[10px] text-[var(--text-muted)] mt-0.5">{MONTH_CN[my.month]}</div>
+              <div className="text-[10px] text-[var(--text-muted)] mt-0.5">{getNaYin(my.ganZhi)}</div>
+              <div className="text-[10px] text-[var(--text-muted)]">{MONTH_CN[my.month]}</div>
               <div className="text-[10px] text-[var(--text-tertiary)]">{my.shiShen}</div>
             </div>
           )
@@ -60,6 +62,7 @@ export default function LiuYuePanel({ liuYueArr, selectedMonth, onSelectMonth, t
               {targetYear}年{MONTH_CN[selectedData.month]}
             </span>
             <span className="text-lg font-bold font-ganzhi text-parchment-100">{selectedData.ganZhi}</span>
+            <span className="text-xs text-[var(--text-muted)]">{getNaYin(selectedData.ganZhi)}</span>
             <span className="text-xs text-[var(--text-tertiary)]">{selectedData.shiShen}</span>
           </div>
 

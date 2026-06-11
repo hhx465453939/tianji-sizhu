@@ -1,4 +1,5 @@
 import type { DaYunItem } from '../lib/bazi/types'
+import { getNaYin } from '../lib/bazi/calculator'
 
 interface Props {
   dayun: DaYunItem
@@ -35,7 +36,8 @@ export default function LiuNianList({ dayun, selectedLiuNianYear, onSelectLiuNia
               }`}
             >
               <div className="text-sm font-bold font-ganzhi">{ln.ganZhi}</div>
-              <div className="text-[10px] text-[var(--text-muted)] mt-0.5">{ln.year}</div>
+              <div className="text-[10px] text-[var(--text-muted)] mt-0.5">{getNaYin(ln.ganZhi)}</div>
+              <div className="text-[10px] text-[var(--text-muted)]">{ln.year}</div>
               <div className="text-[10px] text-[var(--text-tertiary)]">{ln.ganshen}/{ln.zhishen}</div>
             </div>
           )

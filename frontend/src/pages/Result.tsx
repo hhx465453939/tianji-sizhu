@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { calculateBazi, calculateShenshaForDate, calculateLiuYueForYear, calculateDaYunAllLiuNian } from '../lib/bazi/calculator'
+import { calculateBazi, calculateShenshaForDate, calculateLiuYueForYear, calculateDaYunAllLiuNian, getNaYin } from '../lib/bazi/calculator'
 import type { LiuYueItem } from '../lib/bazi/calculator'
 import { generatePrompt, getTemplateList } from '../lib/prompt/generator'
 import type { PromptTemplate } from '../lib/prompt/generator'
@@ -360,6 +360,9 @@ function Result() {
                   ? selectedDaYun.ganZhi.join('')
                   : selectedDaYun.ganZhi}
               </span>
+              <span className="text-xs text-[var(--text-muted)] ml-1">
+                {getNaYin(Array.isArray(selectedDaYun.ganZhi) ? selectedDaYun.ganZhi.join('') : selectedDaYun.ganZhi)}
+              </span>
               <span className="text-xs text-[var(--text-muted)] ml-2">
                 ({selectedDaYun.startYear}-{(selectedDaYun.startYear + 9)}年)
               </span>
@@ -374,6 +377,9 @@ function Result() {
                   {Array.isArray(selectedLiuNian.ganZhi)
                     ? selectedLiuNian.ganZhi.join('')
                     : selectedLiuNian.ganZhi}
+                </span>
+                <span className="text-xs text-[var(--text-muted)] ml-1">
+                  {getNaYin(Array.isArray(selectedLiuNian.ganZhi) ? selectedLiuNian.ganZhi.join('') : selectedLiuNian.ganZhi)}
                 </span>
                 <span className="text-xs text-[var(--text-muted)] ml-2">
                   ({selectedLiuNian.year}年)

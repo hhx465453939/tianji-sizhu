@@ -1,4 +1,5 @@
 import type { DaYunItem } from '../lib/bazi/types'
+import { getNaYin } from '../lib/bazi/calculator'
 
 interface Props {
   dayunArr: DaYunItem[]
@@ -37,6 +38,7 @@ export default function DaYunTimeline({ dayunArr, currentStartYear, selectedStar
                 }`}
               >
                 <div className={`text-lg font-bold font-ganzhi ${isSelected ? 'text-gold' : 'text-parchment-100'}`}>{dy.ganZhi}</div>
+                <div className="text-[10px] text-[var(--text-muted)] mt-0.5">{getNaYin(dy.ganZhi)}</div>
                 <div className="text-xs text-[var(--text-tertiary)] mt-1">{dy.ganshen}/{dy.zhishen}</div>
                 <div className="text-xs text-[var(--text-muted)] mt-1">{dy.startYear}</div>
                 {isCurrent && !isSelected && (

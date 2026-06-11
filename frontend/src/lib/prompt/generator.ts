@@ -1,4 +1,5 @@
 import type { BaziResult, BaziInput, PromptContext } from '../bazi/types'
+import { getNaYin } from '../bazi/calculator'
 
 const HOUR_LABELS = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
 
@@ -147,9 +148,9 @@ function buildFortuneStartInfo(result: BaziResult): string {
 
 function buildDaYun(result: BaziResult): string {
   if (!result.dayunArr || result.dayunArr.length === 0) return ''
-  let s = '\n## 大运\n| 大运 | 天干十神 | 地支十神 | 起始年 | 年限 |\n|---|---|---|---|---|\n'
+  let s = '\n## 大运\n| 大运 | 纳音 | 天干十神 | 地支十神 | 起始年 | 年限 |\n|---|---|---|---|---|---|\n'
   for (const dy of result.dayunArr.slice(0, 9)) {
-    s += `| ${dy.ganZhi} | ${dy.ganshen} | ${dy.zhishen} | ${dy.startYear} | ${dy.startYear}-${dy.startYear + 9} |\n`
+    s += `| ${dy.ganZhi} | ${getNaYin(dy.ganZhi)} | ${dy.ganshen} | ${dy.zhishen} | ${dy.startYear} | ${dy.startYear}-${dy.startYear + 9} |\n`
   }
   return s
 }
@@ -163,7 +164,7 @@ function buildCurrentFortune(result: BaziResult, ctx?: PromptContext): string {
 
   if (!dy) return ''
 
-  let s = `\n## 当前运势\n- 当前大运：${dy.ganZhi}（${dy.startYear}-${dy.endYear}年）\n`
+  let s = `\n## 当前运势\n- 当前大运：${dy.ganZhi}（${getNaYin(dy.ganZhi)}，${dy.startYear}-${dy.endYear}年）\n`
 
   // DaYun zhiHideGanShiShen from currentYun
   const dyDetail = result.currentYun?.daYun
@@ -180,7 +181,8 @@ function buildCurrentFortune(result: BaziResult, ctx?: PromptContext): string {
   // LiuNian
   const ln = ctx?.selectedLiuNian || (result.currentYun?.liuNian ? { year: result.currentYun.liuNian.year, ganZhi: Array.isArray(result.currentYun.liuNian.ganZhi) ? result.currentYun.liuNian.ganZhi.join('') : result.currentYun.liuNian.ganZhi, ganshen: '', zhishen: '' } : null)
   if (ln) {
-    s += `- 当前流年：${Array.isArray(ln.ganZhi) ? ln.ganZhi.join('') : ln.ganZhi}（${ln.year}年）\n`
+    const lnGZ = Array.isArray(ln.ganZhi) ? ln.ganZhi.join('') : ln.ganZhi
+    s += `- 当前流年：${lnGZ}（${getNaYin(lnGZ)}，${ln.year}年）\n`
   }
 
   // LiuNian detail from currentYun
@@ -199,7 +201,7 @@ function buildCurrentFortune(result: BaziResult, ctx?: PromptContext): string {
   const lyDetail = result.currentYun?.liuYue
   if (lyDetail) {
     const lyGZ = Array.isArray(lyDetail.ganZhi) ? lyDetail.ganZhi.join('') : lyDetail.ganZhi
-    s += `- 当前流月：${lyGZ}（${lyDetail.monthCn || ''}月）`
+    s += `- 当前流月：${lyGZ}（${getNaYin(lyGZ)}，${lyDetail.monthCn || ''}月）`
     if (lyDetail.shiShen) s += `，十神：${lyDetail.shiShen}`
     s += '\n'
     if (lyDetail.zhiHideGanShiShen?.length) {
@@ -212,7 +214,7 @@ function buildCurrentFortune(result: BaziResult, ctx?: PromptContext): string {
   const lrDetail = result.currentYun?.liuRi
   if (lrDetail && !(lrDetail as any).error) {
     const lrGZ = Array.isArray(lrDetail.ganZhi) ? lrDetail.ganZhi.join('') : lrDetail.ganZhi
-    s += `- 当前流日：${lrGZ}`
+    s += `- 当前流日：${lrGZ}（${getNaYin(lrGZ)}）`
     if (lrDetail.shiShen) s += `，十神：${lrDetail.shiShen}`
     s += '\n'
     if (lrDetail.zhiHideGanShiShen?.length) {
@@ -228,21 +230,21 @@ function buildCurrentFortune(result: BaziResult, ctx?: PromptContext): string {
 function buildFullDaYunLiuNian(ctx?: PromptContext): string {
   if (ctx?.allLiuNianData && ctx.allLiuNianData.length > 0) {
     let s = '\n## 大运十年流年总览\n'
-    s += '| 流年 | 干支 | 天干十神(生克) | 地支十神 | 大运神煞 | 流年神煞 |\n'
-    s += '|---|---|---|---|---|---|\n'
+    s += '| 流年 | 干支 | 纳音 | 天干十神(生克) | 地支十神 | 大运神煞 | 流年神煞 |\n'
+    s += '|---|---|---|---|---|---|---|\n'
 
     for (const ln of ctx.allLiuNianData) {
       const isSelected = ctx.selectedLiuNian && ln.year === ctx.selectedLiuNian.year
       const marker = isSelected ? ' ★' : ''
       const dySS = ln.daYunShensha.length > 0 ? ln.daYunShensha.join('、') : '—'
       const lnSS = ln.liuNianShensha.length > 0 ? ln.liuNianShensha.join('、') : '—'
-      s += `| ${ln.year}年${marker} | ${ln.ganZhi} | ${ln.ganshen} | ${ln.zhishen} | ${dySS} | ${lnSS} |\n`
+      s += `| ${ln.year}年${marker} | ${ln.ganZhi} | ${getNaYin(ln.ganZhi)} | ${ln.ganshen} | ${ln.zhishen} | ${dySS} | ${lnSS} |\n`
     }
 
     if (ctx.selectedLiuNian) {
       const sel = ctx.allLiuNianData.find(l => l.year === ctx.selectedLiuNian!.year)
       if (sel) {
-        s += `\n**★ 重点关注年份**：${sel.year}年 ${sel.ganZhi}，`
+        s += `\n**★ 重点关注年份**：${sel.year}年 ${sel.ganZhi}（${getNaYin(sel.ganZhi)}），`
         s += `天干${sel.ganshen}（流年天干与日主的生克关系），`
         s += `地支${sel.zhishen}（流年地支与日主的生克关系）`
         if (sel.liuNianShensha.length > 0) {
@@ -280,19 +282,19 @@ function buildLiuYue(ctx?: PromptContext): string {
   if (!ctx?.liuYueArr || ctx.liuYueArr.length === 0) return ''
 
   let s = '\n## 流月详情（12月）\n'
-  s += '| 月份 | 干支 | 十神(生克) | 神煞 |\n'
-  s += '|---|---|---|---|\n'
+  s += '| 月份 | 干支 | 纳音 | 十神(生克) | 神煞 |\n'
+  s += '|---|---|---|---|---|\n'
 
   for (const my of ctx.liuYueArr) {
     const isSelected = ctx.selectedLiuYueMonth === my.month
     const marker = isSelected ? ' ★' : ''
     const shenshaStr = my.liuYueShensha.length > 0 ? my.liuYueShensha.join('、') : '—'
-    s += `| ${MONTH_CN[my.month]}${marker} | ${my.ganZhi} | ${my.shiShen} | ${shenshaStr} |\n`
+    s += `| ${MONTH_CN[my.month]}${marker} | ${my.ganZhi} | ${getNaYin(my.ganZhi)} | ${my.shiShen} | ${shenshaStr} |\n`
   }
 
   if (ctx.selectedLiuYueMonth && ctx.liuYueArr[ctx.selectedLiuYueMonth - 1]) {
     const sel = ctx.liuYueArr[ctx.selectedLiuYueMonth - 1]
-    s += `\n**★ 重点月份详解**：${sel.ganZhi}（${MONTH_CN[sel.month]}）\n`
+    s += `\n**★ 重点月份详解**：${sel.ganZhi}（${getNaYin(sel.ganZhi)}，${MONTH_CN[sel.month]}）\n`
     s += `- 十神关系：${sel.shiShen}（流月天干与日主的生克关系）\n`
     if (sel.liuYueShensha.length > 0) {
       s += `- 神煞：${sel.liuYueShensha.join('、')}\n`

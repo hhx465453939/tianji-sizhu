@@ -3,6 +3,32 @@ import type { BaziResult, BaziInput, DaYunItem } from './types'
 
 const { getCurrentEightCharJSON } = mystilight as any
 
+// ── NaYin (纳音) lookup ──────────────────────────────────────────
+const GAN = '甲乙丙丁戊己庚辛壬癸'
+const ZHI = '子丑寅卯辰巳午未申酉戌亥'
+
+const NA_YIN_30 = [
+  '海中金', '炉中火', '大林木', '路旁土', '剑锋金', '山头火',
+  '涧下水', '城头土', '白蜡金', '杨柳木', '泉中水', '屋上土',
+  '霹雳火', '松柏木', '长流水', '沙中金', '山下火', '平地木',
+  '壁上土', '金箔金', '覆灯火', '天河水', '大驿土', '钗钏金',
+  '桑柘木', '大溪水', '沙中土', '天上火', '石榴木', '大海水',
+]
+
+/**
+ * Get naYin (纳音) for a ganZhi pair, e.g. '甲子' → '海中金'
+ */
+export function getNaYin(ganZhi: string): string {
+  if (!ganZhi || ganZhi.length < 2) return ''
+  const gi = GAN.indexOf(ganZhi[0])
+  const zi = ZHI.indexOf(ganZhi[1])
+  if (gi < 0 || zi < 0) return ''
+  for (let i = 0; i < 60; i++) {
+    if (i % 10 === gi && i % 12 === zi) return NA_YIN_30[i >> 1]
+  }
+  return ''
+}
+
 const HOUR_TO_TIME: Record<number, number> = {
   0: 23, 1: 1, 2: 3, 3: 5, 4: 7, 5: 9,
   6: 11, 7: 13, 8: 15, 9: 17, 10: 19, 11: 21,
