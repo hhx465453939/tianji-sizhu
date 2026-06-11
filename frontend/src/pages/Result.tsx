@@ -4,7 +4,7 @@ import { calculateBazi, calculateShenshaForDate, calculateLiuYueForYear } from '
 import type { LiuYueItem } from '../lib/bazi/calculator'
 import { generatePrompt, getTemplateList } from '../lib/prompt/generator'
 import type { PromptTemplate } from '../lib/prompt/generator'
-import type { BaziResult, BaziInput, DaYunItem } from '../lib/bazi/types'
+import type { BaziResult, BaziInput, DaYunItem, PromptContext } from '../lib/bazi/types'
 import PillarCard from '../components/PillarCard'
 import FiveElementRadar from '../components/FiveElementRadar'
 import DaYunTimeline from '../components/DaYunTimeline'
@@ -149,7 +149,19 @@ function Result() {
 
   const handleCopyPrompt = async () => {
     if (!result || !input) return
-    const prompt = generatePrompt(result, input, template)
+
+    // Build prompt context from current user selections
+    const promptContext: PromptContext = {
+      selectedDaYun: selectedDaYun || undefined,
+      selectedLiuNian: selectedLiuNian || undefined,
+      liunianShensha: liunianShensha?.shensha?.current
+        ? { daYun: liunianShensha.shensha.current.daYun || [], liuNian: liunianShensha.shensha.current.liuNian || [] }
+        : undefined,
+      liuYueArr: liuyueArr.length > 0 ? liuyueArr : undefined,
+      selectedLiuYueMonth: selectedLiuYueMonth,
+    }
+
+    const prompt = generatePrompt(result, input, template, promptContext)
     let success = false
 
     if (navigator.clipboard?.writeText) {

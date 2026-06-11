@@ -1,6 +1,8 @@
-import type { BaziResult, BaziInput } from '../bazi/types'
+import type { BaziResult, BaziInput, PromptContext } from '../bazi/types'
 
 const HOUR_LABELS = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+
+const MONTH_CN = ['', '正月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '冬月', '腊月']
 
 export type PromptTemplate = 'comprehensive' | 'career' | 'relationship' | 'health' | 'yearly' | 'brief'
 
@@ -54,13 +56,18 @@ const TEMPLATE_INSTRUCTIONS: Record<PromptTemplate, string> = {
 5. 最重要的一条建议`,
 }
 
-export function generatePrompt(result: BaziResult, input: BaziInput, template: PromptTemplate = 'comprehensive'): string {
+// ── Section builders ──────────────────────────────────────────────
+// Each builder appends to `sections[]` independently.
+// To add a new feature to the prompt, add a new builder here
+// and call it in generatePrompt().
+
+function buildBaseInfo(input: BaziInput, result: BaziResult): string {
   const genderStr = input.gender === 0 ? '男' : '女'
   const calendarStr = input.calendar === 0 ? '阳历' : '阴历'
   const hourLabel = HOUR_LABELS[input.hour] || ''
   const p = result.pillars
 
-  let prompt = `你是一位精通子平八字理论的命理分析师，拥有深厚的五行生克制化、十神配置、格局用神知识和丰富的实践经验。请根据以下八字命盘进行专业分析。
+  return `你是一位精通子平八字理论的命理分析师，拥有深厚的五行生克制化、十神配置、格局用神知识和丰富的实践经验。请根据以下八字命盘进行专业分析。
 
 ## 基本信息
 - 性别：${genderStr}
@@ -76,8 +83,11 @@ ${input.name ? `- 备注：${input.name}` : ''}
 | 十神(干) | ${p.year.shiShenGan} | ${p.month.shiShenGan} | — | ${p.time.shiShenGan} |
 | 十神(支) | ${p.year.shiShenZhi} | ${p.month.shiShenZhi} | ${p.day.shiShenZhi} | ${p.time.shiShenZhi} |
 | 纳音 | ${p.year.naYin} | ${p.month.naYin} | ${p.day.naYin} | ${p.time.naYin} |
-| 地势 | ${p.year.diShi} | ${p.month.diShi} | ${p.day.diShi} | ${p.time.diShi} |
+| 地势 | ${p.year.diShi} | ${p.month.diShi} | ${p.day.diShi} | ${p.time.diShi} |`
+}
 
+function buildDayMaster(result: BaziResult): string {
+  return `
 ## 日主信息
 - 日主：${result.dayMaster}（${result.dayMasterWuXing}）
 - 身强/身弱：${typeof result.yuanHaiZiping.shenQiang === 'object' ? `${result.yuanHaiZiping.shenQiang.judge}（得分${result.yuanHaiZiping.shenQiang.score}/阈值${result.yuanHaiZiping.shenQiang.threshold}）` : result.yuanHaiZiping.shenQiang}
@@ -86,93 +96,158 @@ ${input.name ? `- 备注：${input.name}` : ''}
 ## 五行力量
 | 木 | 火 | 土 | 金 | 水 |
 |---|---|---|---|---|
-| ${result.wuXingPower['木'] || 0} | ${result.wuXingPower['火'] || 0} | ${result.wuXingPower['土'] || 0} | ${result.wuXingPower['金'] || 0} | ${result.wuXingPower['水'] || 0} |
-`
+| ${result.wuXingPower['木'] || 0} | ${result.wuXingPower['火'] || 0} | ${result.wuXingPower['土'] || 0} | ${result.wuXingPower['金'] || 0} | ${result.wuXingPower['水'] || 0} |`
+}
 
-  // Special pillars
-  prompt += `
+function buildSpecialPillars(result: BaziResult): string {
+  return `
 ## 特殊宫位
 - 胎元：${result.taiYuan}（${result.taiYuanNaYin}）
 - 胎息：${result.taiXi}（${result.taiXiNaYin}）
 - 命宫：${result.mingGong}（${result.mingGongNaYin}）
-- 身宫：${result.shenGong}（${result.shenGongNaYin}）
-`
+- 身宫：${result.shenGong}（${result.shenGongNaYin}）`
+}
 
-  // Fortune periods
-  if (result.dayunArr && result.dayunArr.length > 0) {
-    prompt += `
-## 大运
-| 大运 | 天干十神 | 地支十神 | 起始年 |
-|---|---|---|---|
-`
-    for (const dy of result.dayunArr.slice(0, 9)) {
-      prompt += `| ${dy.ganZhi} | ${dy.ganshen} | ${dy.zhishen} | ${dy.startYear} |\n`
+function buildDaYun(result: BaziResult): string {
+  if (!result.dayunArr || result.dayunArr.length === 0) return ''
+  let s = '\n## 大运\n| 大运 | 天干十神 | 地支十神 | 起始年 |\n|---|---|---|---|\n'
+  for (const dy of result.dayunArr.slice(0, 9)) {
+    s += `| ${dy.ganZhi} | ${dy.ganshen} | ${dy.zhishen} | ${dy.startYear} |\n`
+  }
+  return s
+}
+
+function buildCurrentFortune(result: BaziResult, ctx?: PromptContext): string {
+  // If context has a selected DaYun/LiuNian, use that; otherwise use default current
+  const dy = ctx?.selectedDaYun
+    ? { ganZhi: Array.isArray(ctx.selectedDaYun.ganZhi) ? ctx.selectedDaYun.ganZhi.join('') : ctx.selectedDaYun.ganZhi, startYear: ctx.selectedDaYun.startYear, endYear: ctx.selectedDaYun.startYear + 9 }
+    : result.currentYun?.daYun
+      ? { ganZhi: Array.isArray(result.currentYun.daYun.ganZhi) ? result.currentYun.daYun.ganZhi.join('') : result.currentYun.daYun.ganZhi, startYear: result.currentYun.daYun.startYear, endYear: result.currentYun.daYun.endYear }
+      : null
+
+  if (!dy) return ''
+
+  let s = `\n## 当前运势\n- 当前大运：${dy.ganZhi}（${dy.startYear}-${dy.endYear}）\n`
+
+  // LiuNian
+  const ln = ctx?.selectedLiuNian || (result.currentYun?.liuNian ? { year: result.currentYun.liuNian.year, ganZhi: Array.isArray(result.currentYun.liuNian.ganZhi) ? result.currentYun.liuNian.ganZhi.join('') : result.currentYun.liuNian.ganZhi, ganshen: '', zhishen: '' } : null)
+  if (ln) {
+    s += `- 当前流年：${Array.isArray(ln.ganZhi) ? ln.ganZhi.join('') : ln.ganZhi}（${ln.year}年）\n`
+  }
+
+  return s
+}
+
+/** NEW: Selected LiuNian shensha detail */
+function buildLiuNianShensha(ctx?: PromptContext): string {
+  if (!ctx?.liunianShensha) return ''
+
+  const lines: string[] = []
+  if (ctx.liunianShensha.daYun?.length) {
+    lines.push(`大运神煞：${ctx.liunianShensha.daYun.join('、')}`)
+  }
+  if (ctx.liunianShensha.liuNian?.length) {
+    lines.push(`流年神煞：${ctx.liunianShensha.liuNian.join('、')}`)
+  }
+
+  if (lines.length === 0) return ''
+
+  return `\n## 流年运势神煞\n${lines.join('\n')}`
+}
+
+/** NEW: 12-month LiuYue detail */
+function buildLiuYue(ctx?: PromptContext): string {
+  if (!ctx?.liuYueArr || ctx.liuYueArr.length === 0) return ''
+
+  let s = '\n## 流月（12月）\n| 月份 | 干支 | 十神 | 神煞 |\n|---|---|---|---|\n'
+  for (const my of ctx.liuYueArr) {
+    const shenshaStr = my.liuYueShensha.length > 0 ? my.liuYueShensha.join('、') : '—'
+    s += `| ${MONTH_CN[my.month]} | ${my.ganZhi} | ${my.shiShen} | ${shenshaStr} |\n`
+  }
+
+  // Highlight selected month
+  if (ctx.selectedLiuYueMonth && ctx.liuYueArr[ctx.selectedLiuYueMonth - 1]) {
+    const sel = ctx.liuYueArr[ctx.selectedLiuYueMonth - 1]
+    if (sel.liuYueShensha.length > 0) {
+      s += `\n**重点关注月份**：${sel.ganZhi}（${MONTH_CN[sel.month]}），神煞：${sel.liuYueShensha.join('、')}\n`
     }
   }
 
-  // Current fortune
-  if (result.currentYun?.daYun) {
-    const dy = result.currentYun.daYun
-    const ganZhiStr = Array.isArray(dy.ganZhi) ? dy.ganZhi.join('') : dy.ganZhi
-    prompt += `
-## 当前运势
-- 当前大运：${ganZhiStr}（${dy.startYear}-${dy.endYear}）
-`
-    if (result.currentYun.liuNian) {
-      const ln = result.currentYun.liuNian
-      const lnGanZhi = Array.isArray(ln.ganZhi) ? ln.ganZhi.join('') : ln.ganZhi
-      prompt += `- 当前流年：${lnGanZhi}（${ln.year}年，${ln.age}岁）\n`
-    }
+  return s
+}
+
+function buildShensha(result: BaziResult, ctx?: PromptContext): string {
+  if (!result.shensha) return ''
+
+  const lines: string[] = []
+  if (result.shensha.nian?.length) lines.push(`年柱：${result.shensha.nian.join('、')}`)
+  if (result.shensha.yue?.length) lines.push(`月柱：${result.shensha.yue.join('、')}`)
+  if (result.shensha.ri?.length) lines.push(`日柱：${result.shensha.ri.join('、')}`)
+  if (result.shensha.shi?.length) lines.push(`时柱：${result.shensha.shi.join('、')}`)
+
+  // Append current shensha from context if available
+  if (ctx?.liunianShensha) {
+    if (ctx.liunianShensha.daYun?.length) lines.push(`大运：${ctx.liunianShensha.daYun.join('、')}`)
+    if (ctx.liunianShensha.liuNian?.length) lines.push(`流年：${ctx.liunianShensha.liuNian.join('、')}`)
+  } else if (result.shensha.current) {
+    if (result.shensha.current.daYun?.length) lines.push(`大运：${result.shensha.current.daYun.join('、')}`)
+    if (result.shensha.current.liuNian?.length) lines.push(`流年：${result.shensha.current.liuNian.join('、')}`)
   }
 
-  // Analysis hints from library
-  if (result.analysis.XiYongShen && result.analysis.XiYongShen.length > 0) {
-    const xiyong = result.analysis.XiYongShen.map((s: any) =>
-      typeof s === 'string' ? s : (s?.judge || JSON.stringify(s))
-    )
-    prompt += `
-## 喜用神参考
-${xiyong.join('\n')}
-`
-  }
+  if (lines.length === 0) return ''
 
-  // Gan/Zhi relations
+  return `\n## 神煞\n${lines.join('\n')}`
+}
+
+function buildRelations(result: BaziResult): string {
+  let s = ''
   if (result.ganRelations && result.ganRelations.length > 0) {
-    prompt += `
-## 天干关系
-${result.ganRelations.map((r: any) => typeof r === 'string' ? r : (r.desc || JSON.stringify(r))).join('、')}
-`
+    s += `\n## 天干关系\n${result.ganRelations.map((r: any) => typeof r === 'string' ? r : (r.desc || JSON.stringify(r))).join('、')}\n`
   }
   if (result.zhiRelations && result.zhiRelations.length > 0) {
-    prompt += `
-## 地支关系
-${result.zhiRelations.map((r: any) => typeof r === 'string' ? r : (r.desc || JSON.stringify(r))).join('、')}
-`
+    s += `\n## 地支关系\n${result.zhiRelations.map((r: any) => typeof r === 'string' ? r : (r.desc || JSON.stringify(r))).join('、')}\n`
   }
+  return s
+}
 
-  // Shensha (神煞)
-  if (result.shensha) {
-    const shenshaLines: string[] = []
-    if (result.shensha.nian?.length) shenshaLines.push(`年柱：${result.shensha.nian.join('、')}`)
-    if (result.shensha.yue?.length) shenshaLines.push(`月柱：${result.shensha.yue.join('、')}`)
-    if (result.shensha.ri?.length) shenshaLines.push(`日柱：${result.shensha.ri.join('、')}`)
-    if (result.shensha.shi?.length) shenshaLines.push(`时柱：${result.shensha.shi.join('、')}`)
-    if (shenshaLines.length > 0) {
-      prompt += `
-## 神煞
-${shenshaLines.join('\n')}
-`
-    }
-  }
+function buildAnalysis(result: BaziResult): string {
+  if (!result.analysis.XiYongShen || result.analysis.XiYongShen.length === 0) return ''
+  const xiyong = result.analysis.XiYongShen.map((s: any) =>
+    typeof s === 'string' ? s : (s?.judge || JSON.stringify(s))
+  )
+  return `\n## 喜用神参考\n${xiyong.join('\n')}`
+}
 
-  // Instructions
-  prompt += `
+// ── Main generator ────────────────────────────────────────────────
+
+export function generatePrompt(
+  result: BaziResult,
+  input: BaziInput,
+  template: PromptTemplate = 'comprehensive',
+  context?: PromptContext,
+): string {
+  const sections: string[] = [
+    buildBaseInfo(input, result),
+    buildDayMaster(result),
+    buildSpecialPillars(result),
+    buildDaYun(result),
+    buildCurrentFortune(result, context),
+    buildLiuNianShensha(context),   // NEW: selected liunian shensha
+    buildLiuYue(context),            // NEW: 12-month detail
+    buildAnalysis(result),
+    buildRelations(result),
+    buildShensha(result, context),   // ENHANCED: includes context shensha
+  ]
+
+  // Filter out empty sections
+  const body = sections.filter(s => s.trim() !== '').join('\n')
+
+  return `${body}
+
 ---
 ## 分析要求
 ${TEMPLATE_INSTRUCTIONS[template]}
 `
-
-  return prompt
 }
 
 export function getTemplateList(): { key: PromptTemplate; label: string }[] {

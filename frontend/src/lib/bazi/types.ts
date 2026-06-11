@@ -123,3 +123,15 @@ export interface BaziInput {
   hour: number
   calendar: number
 }
+
+/** Context for prompt generation: carries user's current UI selections */
+export interface PromptContext {
+  selectedDaYun?: DaYunItem
+  selectedLiuNian?: { year: number; ganZhi: string; ganshen: string; zhishen: string }
+  liunianShensha?: {
+    daYun: string[]
+    liuNian: string[]
+  }
+  liuYueArr?: { month: number; ganZhi: string; shiShen: string; liuYueShensha: string[] }[]
+  selectedLiuYueMonth?: number
+}
