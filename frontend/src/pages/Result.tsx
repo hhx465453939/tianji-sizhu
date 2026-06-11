@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { calculateBazi, calculateShenshaForDate } from '../lib/bazi/calculator'
+import { calculateBazi, calculateShenshaForDate, calculateLiuYueForYear } from '../lib/bazi/calculator'
+import type { LiuYueItem } from '../lib/bazi/calculator'
 import { generatePrompt, getTemplateList } from '../lib/prompt/generator'
 import type { PromptTemplate } from '../lib/prompt/generator'
 import type { BaziResult, BaziInput, DaYunItem } from '../lib/bazi/types'
@@ -23,12 +24,17 @@ function Result() {
   // DaYun / LiuNian selection state
   const [selectedDaYunYear, setSelectedDaYunYear] = useState<number | undefined>(undefined)
   const [selectedLiuNianYear, setSelectedLiuNianYear] = useState<number | undefined>(undefined)
+  const [selectedLiuYueMonth, setSelectedLiuYueMonth] = useState<number | undefined>(undefined)
 
-  // Shensha data for the selected LiuNian (dynamically calculated)
+  // Shensha for selected LiuNian
   const [liunianShensha, setLiunianShensha] = useState<{
     shensha: BaziResult['shensha']
     currentYun: BaziResult['currentYun']
   } | null>(null)
+
+  // 12 months data for selected LiuNian
+  const [liuyueArr, setLiuyueArr] = useState<LiuYueItem[]>([])
+  const [liuyueLoading, setLiuyueLoading] = useState(false)
 
   const input = location.state as BaziInput | null
 
@@ -68,10 +74,16 @@ function Result() {
     return selectedDaYun.liunianArr.find(ln => ln.year === currentYear) || null
   }, [selectedDaYun, selectedLiuNianYear])
 
-  // When selectedLiuNianYear changes, recalculate shensha for that year
+  // When selectedLiuNianYear changes, recalculate shensha + all 12 liuYue
   useEffect(() => {
     if (!input || !result) return
-    const targetYear = selectedLiuNianYear ?? new Date().getFullYear()
+    const targetYear = selectedLiuNian?.year ?? new Date().getFullYear()
+    if (!selectedLiuNian) return
+
+    // Reset month selection
+    setSelectedLiuYueMonth(undefined)
+
+    // Calculate shensha for the year
     try {
       const data = calculateShenshaForDate(input, targetYear)
       setLiunianShensha(data)
@@ -79,19 +91,39 @@ function Result() {
       console.error('Failed to calculate shensha for year', targetYear, e)
       setLiunianShensha(null)
     }
-  }, [input, result, selectedLiuNianYear])
+
+    // Calculate all 12 months
+    setLiuyueLoading(true)
+    // Use setTimeout to avoid blocking UI
+    const timer = setTimeout(() => {
+      try {
+        const months = calculateLiuYueForYear(input, targetYear)
+        setLiuyueArr(months)
+        // Auto-select current month if viewing current year
+        const currentYear = new Date().getFullYear()
+        if (targetYear === currentYear) {
+          setSelectedLiuYueMonth(new Date().getMonth() + 1)
+        }
+      } catch (e) {
+        console.error('Failed to calculate liuYue for year', targetYear, e)
+        setLiuyueArr([])
+      } finally {
+        setLiuyueLoading(false)
+      }
+    }, 0)
+
+    return () => clearTimeout(timer)
+  }, [input, result, selectedLiuNian])
 
   // Build the complete shensha display: pillar shensha + current period shensha
   const displayShensha = useMemo(() => {
     if (!result?.shensha) return undefined
     const base = { ...result.shensha }
 
-    // If we have dynamic liunian shensha, use its current shensha
     if (liunianShensha?.shensha?.current) {
       return { ...base, current: liunianShensha.shensha.current }
     }
 
-    // Fallback: for current period, use original data; for non-current, no current shensha
     const effectiveDaYunYear = selectedDaYunYear ?? currentDaYunStart
     if (effectiveDaYunYear !== currentDaYunStart) {
       return { ...base, current: undefined }
@@ -100,17 +132,19 @@ function Result() {
     return base
   }, [result?.shensha, liunianShensha, selectedDaYunYear, currentDaYunStart])
 
-  // Extract liuYue data from dynamic calculation
-  const displayLiuYue = liunianShensha?.currentYun?.liuYue || null
-  const displayLiuYueShensha = liunianShensha?.shensha?.current?.liuYue
-
   const handleDaYunSelect = useCallback((startYear: number) => {
     setSelectedDaYunYear(startYear)
-    setSelectedLiuNianYear(undefined) // reset liunian when dayun changes
+    setSelectedLiuNianYear(undefined)
+    setSelectedLiuYueMonth(undefined)
+    setLiuyueArr([])
   }, [])
 
   const handleLiuNianSelect = useCallback((year: number) => {
     setSelectedLiuNianYear(year)
+  }, [])
+
+  const handleLiuYueSelect = useCallback((month: number) => {
+    setSelectedLiuYueMonth(month)
   }, [])
 
   const handleCopyPrompt = async () => {
@@ -118,7 +152,6 @@ function Result() {
     const prompt = generatePrompt(result, input, template)
     let success = false
 
-    // Method 1: navigator.clipboard (requires HTTPS or localhost)
     if (navigator.clipboard?.writeText) {
       try {
         await navigator.clipboard.writeText(prompt)
@@ -126,7 +159,6 @@ function Result() {
       } catch { /* blocked on non-secure context */ }
     }
 
-    // Method 2: Wails binding
     if (!success && (window as any)?.go?.main) {
       try {
         const { CopyToClipboard } = await import('../../wailsjs/go/main/App')
@@ -135,7 +167,6 @@ function Result() {
       } catch { /* Wails not available */ }
     }
 
-    // Method 3: legacy execCommand fallback (works on HTTP)
     if (!success) {
       try {
         const textarea = document.createElement('textarea')
@@ -331,10 +362,21 @@ function Result() {
         </div>
       )}
 
-      {/* LiuYue Panel - show when a LiuNian is selected */}
+      {/* LiuYue Panel - 12 months grid with shensha on click */}
       {selectedLiuNian && (
         <div className="mb-6">
-          <LiuYuePanel liuYue={displayLiuYue} liuYueShensha={displayLiuYueShensha} />
+          {liuyueLoading ? (
+            <div className="panel-traditional p-4 text-center text-[var(--text-secondary)]">
+              计算流月中...
+            </div>
+          ) : (
+            <LiuYuePanel
+              liuYueArr={liuyueArr}
+              selectedMonth={selectedLiuYueMonth}
+              onSelectMonth={handleLiuYueSelect}
+              targetYear={selectedLiuNian.year}
+            />
+          )}
         </div>
       )}
 

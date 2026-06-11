@@ -44,6 +44,56 @@ export function calculateShenshaForDate(
   }
 }
 
+export interface LiuYueItem {
+  month: number           // 1-12
+  ganZhi: string          // e.g. '甲午'
+  shiShen: string         // e.g. '正财'
+  liuYueShensha: string[] // shensha for this month
+}
+
+/**
+ * Calculate all 12 months (流月) for a given flow year.
+ * Calls the library for each month to get gan-zhi and shensha.
+ */
+export function calculateLiuYueForYear(
+  input: BaziInput,
+  targetYear: number,
+): LiuYueItem[] {
+  const hour = HOUR_TO_TIME[input.hour] ?? 0
+  const now = new Date()
+  const results: LiuYueItem[] = []
+
+  for (let m = 1; m <= 12; m++) {
+    const data = getCurrentEightCharJSON({
+      year: input.year,
+      month: input.month,
+      day: input.day,
+      hour: hour,
+      minute: 0,
+      second: 0,
+      gender: input.gender === 0 ? 1 : 0,
+      sect: 2,
+      currentYear: targetYear,
+      currentMonth: m,
+      currentDay: now.getDate(),
+    })
+
+    const liuYue = data.currentYun?.liuYue
+    const ganZhi = liuYue?.ganZhi
+      ? (Array.isArray(liuYue.ganZhi) ? liuYue.ganZhi.join('') : String(liuYue.ganZhi))
+      : ''
+
+    results.push({
+      month: m,
+      ganZhi,
+      shiShen: liuYue?.shiShen || '',
+      liuYueShensha: data.shensha?.current?.liuYue || [],
+    })
+  }
+
+  return results
+}
+
 export function calculateBazi(input: BaziInput): BaziResult {
   const hour = HOUR_TO_TIME[input.hour] ?? 0
 
