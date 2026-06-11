@@ -80,6 +80,16 @@ export default function ShenshaPanel({ shensha }: Props) {
                 流年·{s}
               </span>
             ))}
+            {shensha.current?.liuYue?.map((s, i) => (
+              <span key={`ly-${i}`} className="px-2 py-0.5 rounded-sm text-xs border-2 border-[#7c5cbf]/40 bg-[#7c5cbf]/10 text-[#b69cf0] font-heading">
+                流月·{s}
+              </span>
+            ))}
+            {shensha.current?.liuRi?.map((s, i) => (
+              <span key={`lr-${i}`} className="px-2 py-0.5 rounded-sm text-xs border-2 border-water/40 bg-water/10 text-[#6b9bc3] font-heading">
+                流日·{s}
+              </span>
+            ))}
           </div>
         </div>
       )}

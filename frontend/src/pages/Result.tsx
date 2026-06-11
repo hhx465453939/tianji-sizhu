@@ -12,6 +12,7 @@ import LiuNianList from '../components/LiuNianList'
 import LiuYuePanel from '../components/LiuYuePanel'
 import ShenshaPanel from '../components/ShenshaPanel'
 import RelationsPanel from '../components/RelationsPanel'
+import DetailedAnalysis from '../components/DetailedAnalysis'
 
 function Result() {
   const location = useLocation()
@@ -446,6 +447,11 @@ function Result() {
       {/* Relations Panel */}
       <div className="mb-6">
         <RelationsPanel ganRelations={result.ganRelations} zhiRelations={result.zhiRelations} />
+      </div>
+
+      {/* Detailed Analysis Accordion */}
+      <div className="mb-6">
+        <DetailedAnalysis result={result} />
       </div>
 
       {/* AI Prompt Section */}
