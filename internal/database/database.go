@@ -27,10 +27,15 @@ type Chart struct {
 }
 
 type ChartSummary struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	Gender    int    `json:"gender"`
-	CreatedAt string `json:"createdAt"`
+	ID         int64  `json:"id"`
+	Name       string `json:"name"`
+	Gender     int    `json:"gender"`
+	BirthYear  int    `json:"birthYear"`
+	BirthMonth int    `json:"birthMonth"`
+	BirthDay   int    `json:"birthDay"`
+	BirthHour  int    `json:"birthHour"`
+	Calendar   int    `json:"calendar"`
+	CreatedAt  string `json:"createdAt"`
 }
 
 func Open(path string) (*DB, error) {
@@ -104,7 +109,7 @@ func (db *DB) GetChart(id int64) (*Chart, error) {
 }
 
 func (db *DB) ListCharts() ([]ChartSummary, error) {
-	rows, err := db.conn.Query(`SELECT id, name, gender, created_at FROM charts ORDER BY created_at DESC`)
+	rows, err := db.conn.Query(`SELECT id, name, gender, birth_year, birth_month, birth_day, birth_hour, calendar, created_at FROM charts ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +118,7 @@ func (db *DB) ListCharts() ([]ChartSummary, error) {
 	var charts []ChartSummary
 	for rows.Next() {
 		var c ChartSummary
-		if err := rows.Scan(&c.ID, &c.Name, &c.Gender, &c.CreatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.Name, &c.Gender, &c.BirthYear, &c.BirthMonth, &c.BirthDay, &c.BirthHour, &c.Calendar, &c.CreatedAt); err != nil {
 			return nil, err
 		}
 		charts = append(charts, c)

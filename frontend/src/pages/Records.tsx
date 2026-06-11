@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import type { BaziInput } from '../lib/bazi/types'
 
 interface ChartSummary {
   id: number
   name: string
   gender: number
+  birthYear: number
+  birthMonth: number
+  birthDay: number
+  birthHour: number
+  calendar: number
   createdAt: string
 }
 
@@ -12,6 +18,7 @@ function Records() {
   const navigate = useNavigate()
   const [records, setRecords] = useState<ChartSummary[]>([])
   const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     loadRecords()
@@ -25,6 +32,36 @@ function Records() {
       setRecords(list || [])
     } catch (e) {
       console.error('load records failed', e)
+    }
+  }
+
+  // Click a record to view its chart: fetch full data and navigate to Result
+  const handleViewChart = async (id: number) => {
+    if (!(window as any)?.go?.main) return
+    setLoading(true)
+    try {
+      const { GetChart } = await import('../../wailsjs/go/main/App')
+      const chart = await GetChart(id)
+      if (!chart) {
+        alert('记录不存在')
+        return
+      }
+      // Build BaziInput from stored birth params and navigate to Result
+      const baziInput: BaziInput = {
+        name: chart.name,
+        gender: chart.gender,
+        year: chart.birthYear,
+        month: chart.birthMonth,
+        day: chart.birthDay,
+        hour: chart.birthHour,
+        calendar: chart.calendar,
+      }
+      navigate('/result', { state: baziInput })
+    } catch (e) {
+      console.error('load chart failed', e)
+      alert('加载记录失败')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -100,25 +137,37 @@ function Records() {
       ) : (
         <div className="space-y-2">
           {filteredRecords.map(r => (
-            <div key={r.id} className="flex justify-between items-center panel-traditional p-4 hover:bg-ink-600 transition-colors">
-              <div>
+            <div
+              key={r.id}
+              onClick={() => handleViewChart(r.id)}
+              className={`flex justify-between items-center panel-traditional p-4 hover:bg-ink-600 transition-colors cursor-pointer ${
+                loading ? 'opacity-60 pointer-events-none' : ''
+              }`}
+            >
+              <div className="flex-1 min-w-0">
                 <span className="font-heading text-parchment-100">{r.name}</span>
                 <span className="ml-2 text-sm text-[var(--text-secondary)]">{r.gender === 0 ? '男' : '女'}</span>
+                <span className="ml-3 text-xs text-[var(--text-tertiary)]">
+                  {r.birthYear}年{r.birthMonth}月{r.birthDay}日
+                </span>
                 <span className="ml-4 text-xs text-[var(--text-muted)]">{r.createdAt?.slice(0, 10)}</span>
               </div>
-              <button
-                onClick={() => handleDelete(r.id)}
-                className="px-3 py-1 text-cinnabar/70 hover:text-cinnabar text-sm transition-colors"
-              >
-                删除
-              </button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-xs text-jade/70 font-heading">点击查看 →</span>
+                <button
+                  onClick={e => { e.stopPropagation(); handleDelete(r.id) }}
+                  className="px-3 py-1 text-cinnabar/70 hover:text-cinnabar text-sm transition-colors"
+                >
+                  删除
+                </button>
+              </div>
             </div>
           ))}
         </div>
       )}
 
       <div className="mt-4 text-center text-xs text-[var(--text-muted)]">
-        共 {filteredRecords.length} 条记录
+        共 {filteredRecords.length} 条记录 · 点击记录查看排盘详情
       </div>
     </div>
   )
