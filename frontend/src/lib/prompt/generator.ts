@@ -110,15 +110,14 @@ function buildSpecialPillars(result: BaziResult): string {
 
 function buildDaYun(result: BaziResult): string {
   if (!result.dayunArr || result.dayunArr.length === 0) return ''
-  let s = '\n## 大运\n| 大运 | 天干十神 | 地支十神 | 起始年 |\n|---|---|---|---|\n'
+  let s = '\n## 大运\n| 大运 | 天干十神 | 地支十神 | 起始年 | 年限 |\n|---|---|---|---|---|\n'
   for (const dy of result.dayunArr.slice(0, 9)) {
-    s += `| ${dy.ganZhi} | ${dy.ganshen} | ${dy.zhishen} | ${dy.startYear} |\n`
+    s += `| ${dy.ganZhi} | ${dy.ganshen} | ${dy.zhishen} | ${dy.startYear} | ${dy.startYear}-${dy.startYear + 9} |\n`
   }
   return s
 }
 
 function buildCurrentFortune(result: BaziResult, ctx?: PromptContext): string {
-  // If context has a selected DaYun/LiuNian, use that; otherwise use default current
   const dy = ctx?.selectedDaYun
     ? { ganZhi: Array.isArray(ctx.selectedDaYun.ganZhi) ? ctx.selectedDaYun.ganZhi.join('') : ctx.selectedDaYun.ganZhi, startYear: ctx.selectedDaYun.startYear, endYear: ctx.selectedDaYun.startYear + 9 }
     : result.currentYun?.daYun
@@ -127,9 +126,8 @@ function buildCurrentFortune(result: BaziResult, ctx?: PromptContext): string {
 
   if (!dy) return ''
 
-  let s = `\n## 当前运势\n- 当前大运：${dy.ganZhi}（${dy.startYear}-${dy.endYear}）\n`
+  let s = `\n## 当前运势\n- 当前大运：${dy.ganZhi}（${dy.startYear}-${dy.endYear}年）\n`
 
-  // LiuNian
   const ln = ctx?.selectedLiuNian || (result.currentYun?.liuNian ? { year: result.currentYun.liuNian.year, ganZhi: Array.isArray(result.currentYun.liuNian.ganZhi) ? result.currentYun.liuNian.ganZhi.join('') : result.currentYun.liuNian.ganZhi, ganshen: '', zhishen: '' } : null)
   if (ln) {
     s += `- 当前流年：${Array.isArray(ln.ganZhi) ? ln.ganZhi.join('') : ln.ganZhi}（${ln.year}年）\n`
@@ -138,8 +136,45 @@ function buildCurrentFortune(result: BaziResult, ctx?: PromptContext): string {
   return s
 }
 
-/** NEW: Selected LiuNian shensha detail */
-function buildLiuNianShensha(ctx?: PromptContext): string {
+/** Comprehensive 10-year liunian overview for the selected DaYun */
+function buildFullDaYunLiuNian(ctx?: PromptContext): string {
+  // If we have batch data, generate the full 10-year table
+  if (ctx?.allLiuNianData && ctx.allLiuNianData.length > 0) {
+    let s = '\n## 大运十年流年总览\n'
+    s += '| 流年 | 干支 | 天干十神(生克) | 地支十神 | 大运神煞 | 流年神煞 |\n'
+    s += '|---|---|---|---|---|---|\n'
+
+    for (const ln of ctx.allLiuNianData) {
+      const isSelected = ctx.selectedLiuNian && ln.year === ctx.selectedLiuNian.year
+      const marker = isSelected ? ' ★' : ''
+      const dySS = ln.daYunShensha.length > 0 ? ln.daYunShensha.join('、') : '—'
+      const lnSS = ln.liuNianShensha.length > 0 ? ln.liuNianShensha.join('、') : '—'
+      s += `| ${ln.year}年${marker} | ${ln.ganZhi} | ${ln.ganshen} | ${ln.zhishen} | ${dySS} | ${lnSS} |\n`
+    }
+
+    // Add interpretation note for the selected year
+    if (ctx.selectedLiuNian) {
+      const sel = ctx.allLiuNianData.find(l => l.year === ctx.selectedLiuNian!.year)
+      if (sel) {
+        s += `\n**★ 重点关注年份**：${sel.year}年 ${sel.ganZhi}，`
+        s += `天干${sel.ganshen}（流年天干与日主的生克关系），`
+        s += `地支${sel.zhishen}（流年地支与日主的生克关系）`
+        if (sel.liuNianShensha.length > 0) {
+          s += `，流年神煞：${sel.liuNianShensha.join('、')}`
+        }
+        s += '\n'
+      }
+    }
+
+    return s
+  }
+
+  // Fallback: single-year shensha only
+  return buildLiuNianShenshaSimple(ctx)
+}
+
+/** Simple fallback: just the selected year's shensha */
+function buildLiuNianShenshaSimple(ctx?: PromptContext): string {
   if (!ctx?.liunianShensha) return ''
 
   const lines: string[] = []
@@ -155,21 +190,28 @@ function buildLiuNianShensha(ctx?: PromptContext): string {
   return `\n## 流年运势神煞\n${lines.join('\n')}`
 }
 
-/** NEW: 12-month LiuYue detail */
+/** Enhanced 12-month LiuYue detail with sheng-ke analysis */
 function buildLiuYue(ctx?: PromptContext): string {
   if (!ctx?.liuYueArr || ctx.liuYueArr.length === 0) return ''
 
-  let s = '\n## 流月（12月）\n| 月份 | 干支 | 十神 | 神煞 |\n|---|---|---|---|\n'
+  let s = '\n## 流月详情（12月）\n'
+  s += '| 月份 | 干支 | 十神(生克) | 神煞 |\n'
+  s += '|---|---|---|---|\n'
+
   for (const my of ctx.liuYueArr) {
+    const isSelected = ctx.selectedLiuYueMonth === my.month
+    const marker = isSelected ? ' ★' : ''
     const shenshaStr = my.liuYueShensha.length > 0 ? my.liuYueShensha.join('、') : '—'
-    s += `| ${MONTH_CN[my.month]} | ${my.ganZhi} | ${my.shiShen} | ${shenshaStr} |\n`
+    s += `| ${MONTH_CN[my.month]}${marker} | ${my.ganZhi} | ${my.shiShen} | ${shenshaStr} |\n`
   }
 
-  // Highlight selected month
+  // Detailed analysis for selected month
   if (ctx.selectedLiuYueMonth && ctx.liuYueArr[ctx.selectedLiuYueMonth - 1]) {
     const sel = ctx.liuYueArr[ctx.selectedLiuYueMonth - 1]
+    s += `\n**★ 重点月份详解**：${sel.ganZhi}（${MONTH_CN[sel.month]}）\n`
+    s += `- 十神关系：${sel.shiShen}（流月天干与日主的生克关系，体现本月对日主的作用力）\n`
     if (sel.liuYueShensha.length > 0) {
-      s += `\n**重点关注月份**：${sel.ganZhi}（${MONTH_CN[sel.month]}），神煞：${sel.liuYueShensha.join('、')}\n`
+      s += `- 神煞：${sel.liuYueShensha.join('、')}\n`
     }
   }
 
@@ -202,10 +244,10 @@ function buildShensha(result: BaziResult, ctx?: PromptContext): string {
 function buildRelations(result: BaziResult): string {
   let s = ''
   if (result.ganRelations && result.ganRelations.length > 0) {
-    s += `\n## 天干关系\n${result.ganRelations.map((r: any) => typeof r === 'string' ? r : (r.desc || JSON.stringify(r))).join('、')}\n`
+    s += `\n## 天干关系（生克制化）\n${result.ganRelations.map((r: any) => typeof r === 'string' ? r : (r.desc || JSON.stringify(r))).join('、')}\n`
   }
   if (result.zhiRelations && result.zhiRelations.length > 0) {
-    s += `\n## 地支关系\n${result.zhiRelations.map((r: any) => typeof r === 'string' ? r : (r.desc || JSON.stringify(r))).join('、')}\n`
+    s += `\n## 地支关系（刑冲合害）\n${result.zhiRelations.map((r: any) => typeof r === 'string' ? r : (r.desc || JSON.stringify(r))).join('、')}\n`
   }
   return s
 }
@@ -232,11 +274,11 @@ export function generatePrompt(
     buildSpecialPillars(result),
     buildDaYun(result),
     buildCurrentFortune(result, context),
-    buildLiuNianShensha(context),   // NEW: selected liunian shensha
-    buildLiuYue(context),            // NEW: 12-month detail
+    buildFullDaYunLiuNian(context),    // ENHANCED: full 10-year table
+    buildLiuYue(context),              // ENHANCED: with sheng-ke analysis
     buildAnalysis(result),
     buildRelations(result),
-    buildShensha(result, context),   // ENHANCED: includes context shensha
+    buildShensha(result, context),
   ]
 
   // Filter out empty sections

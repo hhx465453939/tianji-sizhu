@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { calculateBazi, calculateShenshaForDate, calculateLiuYueForYear } from '../lib/bazi/calculator'
+import { calculateBazi, calculateShenshaForDate, calculateLiuYueForYear, calculateDaYunAllLiuNian } from '../lib/bazi/calculator'
 import type { LiuYueItem } from '../lib/bazi/calculator'
 import { generatePrompt, getTemplateList } from '../lib/prompt/generator'
 import type { PromptTemplate } from '../lib/prompt/generator'
@@ -150,6 +150,16 @@ function Result() {
   const handleCopyPrompt = async () => {
     if (!result || !input) return
 
+    // Batch-calculate all 10 liunian shensha for the selected DaYun (for comprehensive prompt)
+    let allLiuNianData: PromptContext['allLiuNianData']
+    if (selectedDaYun) {
+      try {
+        allLiuNianData = calculateDaYunAllLiuNian(input, selectedDaYun)
+      } catch (e) {
+        console.error('Failed to batch calculate liunian data for prompt', e)
+      }
+    }
+
     // Build prompt context from current user selections
     const promptContext: PromptContext = {
       selectedDaYun: selectedDaYun || undefined,
@@ -159,6 +169,7 @@ function Result() {
         : undefined,
       liuYueArr: liuyueArr.length > 0 ? liuyueArr : undefined,
       selectedLiuYueMonth: selectedLiuYueMonth,
+      allLiuNianData,
     }
 
     const prompt = generatePrompt(result, input, template, promptContext)

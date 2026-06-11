@@ -94,6 +94,49 @@ export function calculateLiuYueForYear(
   return results
 }
 
+export interface LiuNianDetail {
+  year: number
+  ganZhi: string
+  ganshen: string
+  zhishen: string
+  daYunShensha: string[]
+  liuNianShensha: string[]
+}
+
+/**
+ * Batch-calculate shensha for all 10 flow years under a DaYun period.
+ * Used for comprehensive prompt generation.
+ */
+export function calculateDaYunAllLiuNian(
+  input: BaziInput,
+  daYun: DaYunItem,
+): LiuNianDetail[] {
+  const results: LiuNianDetail[] = []
+  for (const ln of daYun.liunianArr) {
+    try {
+      const data = calculateShenshaForDate(input, ln.year)
+      results.push({
+        year: ln.year,
+        ganZhi: Array.isArray(ln.ganZhi) ? ln.ganZhi.join('') : ln.ganZhi,
+        ganshen: ln.ganshen,
+        zhishen: ln.zhishen,
+        daYunShensha: data.shensha?.current?.daYun || [],
+        liuNianShensha: data.shensha?.current?.liuNian || [],
+      })
+    } catch {
+      results.push({
+        year: ln.year,
+        ganZhi: Array.isArray(ln.ganZhi) ? ln.ganZhi.join('') : ln.ganZhi,
+        ganshen: ln.ganshen,
+        zhishen: ln.zhishen,
+        daYunShensha: [],
+        liuNianShensha: [],
+      })
+    }
+  }
+  return results
+}
+
 export function calculateBazi(input: BaziInput): BaziResult {
   const hour = HOUR_TO_TIME[input.hour] ?? 0
 

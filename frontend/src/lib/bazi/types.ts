@@ -134,4 +134,13 @@ export interface PromptContext {
   }
   liuYueArr?: { month: number; ganZhi: string; shiShen: string; liuYueShensha: string[] }[]
   selectedLiuYueMonth?: number
+  /** Full 10-year liunian data with shensha for comprehensive prompt */
+  allLiuNianData?: {
+    year: number
+    ganZhi: string
+    ganshen: string
+    zhishen: string
+    daYunShensha: string[]
+    liuNianShensha: string[]
+  }[]
 }
