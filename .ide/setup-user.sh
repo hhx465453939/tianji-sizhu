@@ -2,6 +2,17 @@
 # Interactive user registration script for CNB dev environment
 # Triggered on first shell login; creates a non-root dev user for bypass-mode tools.
 
+# When sourced from /etc/profile.d/, the running shell may be dash/sh.
+# Re-exec under bash if not already running in bash.
+if [ -z "$BASH_VERSION" ]; then
+    if [ -t 0 ] && [ -x /bin/bash ]; then
+        /bin/bash "/etc/profile.d/01-dev-user-setup.sh" "$@"
+        return 0 2>/dev/null || exit 0
+    else
+        return 0 2>/dev/null || exit 0
+    fi
+fi
+
 LOCK_FILE="/tmp/.dev-user-created"
 
 # Skip if user already registered in this session
@@ -42,9 +53,12 @@ while true; do
     break
 done
 
-# Read password
+# Read password (use stty to hide input for portability)
 while true; do
-    read -s -p "Password: " DEV_PASS
+    printf "Password: "
+    stty -echo 2>/dev/null
+    read DEV_PASS
+    stty echo 2>/dev/null
     echo ""
     if [ -z "$DEV_PASS" ]; then
         echo "Password cannot be empty."
@@ -54,7 +68,10 @@ while true; do
         echo "Password must be at least 4 characters."
         continue
     fi
-    read -s -p "Confirm password: " DEV_PASS2
+    printf "Confirm password: "
+    stty -echo 2>/dev/null
+    read DEV_PASS2
+    stty echo 2>/dev/null
     echo ""
     if [ "$DEV_PASS" != "$DEV_PASS2" ]; then
         echo "Passwords do not match. Try again."

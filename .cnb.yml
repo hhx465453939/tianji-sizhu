@@ -13,9 +13,11 @@ $:
             # Install prerequisites
             apt-get update -qq && apt-get install -y -qq sudo acl >/dev/null 2>&1 || true
             # Inject interactive user registration into bash profile
-            # This runs only on the FIRST terminal open in this session
             cp /workspace/.ide/setup-user.sh /etc/profile.d/01-dev-user-setup.sh
             chmod +x /etc/profile.d/01-dev-user-setup.sh
+            # Also add to .bashrc for non-login shells (e.g. VS Code terminal)
+            grep -q 'dev-user-setup' /root/.bashrc 2>/dev/null || \
+              echo '[ -f /etc/profile.d/01-dev-user-setup.sh ] && source /etc/profile.d/01-dev-user-setup.sh' >> /root/.bashrc
             echo "Dev user registration prompt installed."
         - name: ready
           script: echo "vscode dev environment ready"
