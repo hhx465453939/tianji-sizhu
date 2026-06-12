@@ -94,9 +94,19 @@ func (a *App) CopyToClipboard(text string) error {
 	return nil
 }
 
-func getDBPath() string {
-	home, _ := os.UserHomeDir()
-	dir := filepath.Join(home, ".tianji-sizhu")
+// getDataDir returns the data directory next to the executable.
+// e.g. exe at "E:\software\tianji\tianji-sizhu.exe" → "E:\software\tianji\data\"
+func getDataDir() string {
+	exe, err := os.Executable()
+	if err != nil {
+		// fallback to current working directory
+		exe, _ = filepath.Abs(".")
+	}
+	dir := filepath.Join(filepath.Dir(exe), "data")
 	os.MkdirAll(dir, 0755)
-	return filepath.Join(dir, "charts.db")
+	return dir
+}
+
+func getDBPath() string {
+	return filepath.Join(getDataDir(), "charts.db")
 }

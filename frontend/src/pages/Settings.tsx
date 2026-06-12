@@ -53,7 +53,7 @@ function Settings() {
           <h2 className="text-base font-heading text-gold/80 mb-3 tracking-wide-cn border-b border-bronze/20 pb-2">数据存储</h2>
           <div className="space-y-2 text-sm text-[var(--text-secondary)]">
             <p>排盘记录保存在本地 SQLite 数据库中，完全离线，不上传任何数据。</p>
-            <p className="text-[var(--text-tertiary)]">数据位置：~/.tianji-sizhu/charts.db</p>
+            <p className="text-[var(--text-tertiary)]">数据位置：安装目录/data/charts.db</p>
             <p className="mt-2">支持导出为 JSON 文件，方便备份和迁移。</p>
           </div>
         </div>
