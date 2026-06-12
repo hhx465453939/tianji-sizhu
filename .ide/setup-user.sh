@@ -99,6 +99,19 @@ if [ -d /workspace ]; then
         chmod -R o+rwx /workspace 2>/dev/null || true
 fi
 
+# Deploy Claude Code config to new user
+USER_HOME=$(eval echo "~$DEV_USER")
+if [ -d /root/.claude ]; then
+    mkdir -p "$USER_HOME/.claude"
+    for dir in commands skills agents scripts templates; do
+        [ -d "/root/.claude/$dir" ] && cp -r "/root/.claude/$dir" "$USER_HOME/.claude/$dir"
+    done
+    [ -f /root/.claude/CLAUDE.md ] && cp /root/.claude/CLAUDE.md "$USER_HOME/.claude/CLAUDE.md"
+    [ -f /root/.claude/ralph-config.json ] && cp /root/.claude/ralph-config.json "$USER_HOME/.claude/ralph-config.json"
+    chown -R "$DEV_USER":"$DEV_USER" "$USER_HOME/.claude"
+    echo "Claude Code skills deployed to $USER_HOME/.claude"
+fi
+
 # Mark as done
 touch "$LOCK_FILE"
 echo "$DEV_USER" > /tmp/.dev-username
