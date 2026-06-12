@@ -24,6 +24,10 @@ frontend/package-lock.json
 *.swp
 *.swo
 
+# ── Claude Code local config ───────────────
+.claude/
+系统及.claude迁移模板.7z
+
 # ── OS ─────────────────────────────────────
 .DS_Store
 Thumbs.db

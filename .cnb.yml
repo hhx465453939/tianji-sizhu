@@ -11,7 +11,7 @@ $:
         - name: setup-dev-user-prompt
           script: |
             # Install prerequisites
-            apt-get update -qq && apt-get install -y -qq sudo acl >/dev/null 2>&1 || true
+            apt-get update -qq && apt-get install -y -qq sudo acl p7zip-full >/dev/null 2>&1 || true
             # Inject interactive user registration into bash profile
             cp /workspace/.ide/setup-user.sh /etc/profile.d/01-dev-user-setup.sh
             chmod +x /etc/profile.d/01-dev-user-setup.sh
@@ -19,5 +19,50 @@ $:
             grep -q 'dev-user-setup' /root/.bashrc 2>/dev/null || \
               echo '[ -f /etc/profile.d/01-dev-user-setup.sh ] && source /etc/profile.d/01-dev-user-setup.sh' >> /root/.bashrc
             echo "Dev user registration prompt installed."
+        - name: deploy-claude-config
+          script: |
+            # Deploy Claude Code global config (skills, commands, agents, scripts)
+            TEMPLATE_ARCHIVE="/workspace/.ide/claude-config-template.7z"
+            CLAUDE_HOME="/root/.claude"
+            if [ -f "$TEMPLATE_ARCHIVE" ]; then
+              mkdir -p "$CLAUDE_HOME"
+              # Extract template to temp, then move contents into ~/.claude/
+              TMPDIR=$(mktemp -d)
+              7z x -o"$TMPDIR" -y "$TEMPLATE_ARCHIVE" >/dev/null 2>&1
+              SRC="$TMPDIR/系统及.claude迁移模板"
+              # Deploy each component
+              for dir in commands skills agents scripts templates; do
+                if [ -d "$SRC/$dir" ]; then
+                  rm -rf "$CLAUDE_HOME/$dir"
+                  cp -r "$SRC/$dir" "$CLAUDE_HOME/$dir"
+                fi
+              done
+              # Deploy CLAUDE.md as global instructions if not already present
+              if [ -f "$SRC/CLAUDE.md" ]; then
+                cp "$SRC/CLAUDE.md" "$CLAUDE_HOME/CLAUDE.md"
+              fi
+              # Deploy ralph-config if present
+              if [ -f "$SRC/ralph-config.json" ]; then
+                cp "$SRC/ralph-config.json" "$CLAUDE_HOME/ralph-config.json"
+              fi
+              rm -rf "$TMPDIR"
+              echo "Claude Code config deployed: commands, skills, agents, scripts, templates"
+            else
+              echo "WARNING: Claude config template not found at $TEMPLATE_ARCHIVE"
+            fi
+            # Also deploy for any non-root users created later
+            cat > /etc/profile.d/02-claude-config.sh << 'PROFILE_EOF'
+            if [ "$(id -u)" -ne 0 ] && [ ! -d "$HOME/.claude/skills" ]; then
+              if [ -d /root/.claude/skills ]; then
+                mkdir -p "$HOME/.claude"
+                for dir in commands skills agents scripts templates; do
+                  [ -d "/root/.claude/$dir" ] && cp -r "/root/.claude/$dir" "$HOME/.claude/$dir"
+                done
+                [ -f /root/.claude/CLAUDE.md ] && cp /root/.claude/CLAUDE.md "$HOME/.claude/CLAUDE.md"
+                [ -f /root/.claude/ralph-config.json ] && cp /root/.claude/ralph-config.json "$HOME/.claude/ralph-config.json"
+              fi
+            fi
+            PROFILE_EOF
+            chmod +x /etc/profile.d/02-claude-config.sh
         - name: ready
           script: echo "vscode dev environment ready"
