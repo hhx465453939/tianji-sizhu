@@ -1,0 +1,13 @@
+$:
+  vscode:
+    - docker:
+        image: docker.cnb.cool/ciallo.cv/default-dev-env:latest
+      services:
+        - name: vscode
+          options:
+            # 断开 HTTP/SSH 后，最多离线保活 2 小时
+            keepAliveTimeout: 2h
+        - docker
+      stages:
+        - name: ready
+          script: echo "vscode dev environment ready"
