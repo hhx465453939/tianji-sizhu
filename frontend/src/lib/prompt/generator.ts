@@ -67,12 +67,16 @@ function buildBaseInfo(input: BaziInput, result: BaziResult): string {
   const calendarStr = input.calendar === 0 ? '阳历' : '阴历'
   const hourLabel = HOUR_LABELS[input.hour] || ''
   const p = result.pillars
+  const lunarLine = result.lunarDate
+    ? `- 农历：${result.lunarDate.fullString}`
+    : ''
 
   return `你是一位精通子平八字理论的命理分析师，拥有深厚的五行生克制化、十神配置、格局用神知识和丰富的实践经验。请根据以下八字命盘进行专业分析。
 
 ## 基本信息
 - 性别：${genderStr}
 - 出生：${input.year}年${input.month}月${input.day}日 ${hourLabel}时（${calendarStr}）
+${lunarLine}
 ${input.name ? `- 备注：${input.name}` : ''}
 
 ## 四柱排盘

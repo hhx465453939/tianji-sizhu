@@ -81,4 +81,14 @@ describe('calculateBazi', () => {
     expect(result.rawData).toBeDefined()
     expect(result.rawData.pillars).toBeDefined()
   })
+
+  it('should have lunarDate for solar input', () => {
+    const result = calculateBazi(baseInput)
+    expect(result.lunarDate).toBeDefined()
+    expect(result.lunarDate).not.toBeNull()
+    expect(result.lunarDate!.fullString).toBeTruthy()
+    expect(result.lunarDate!.monthCn).toBeTruthy()
+    expect(result.lunarDate!.dayCn).toBeTruthy()
+    expect(result.lunarDate!.yearGanZhi).toBeTruthy()
+  })
 })

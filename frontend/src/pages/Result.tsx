@@ -249,10 +249,18 @@ function Result() {
         <div>
           <h1 className="text-xl font-semibold font-heading text-gold tracking-wide-cn">排盘结果</h1>
           {input && (
-            <p className="text-[var(--text-secondary)] text-sm mt-1">
-              {input.name && `${input.name} · `}
-              {input.gender === 0 ? '男' : '女'} · {input.year}年{input.month}月{input.day}日
-            </p>
+            <>
+              <p className="text-[var(--text-secondary)] text-sm mt-1">
+                {input.name && `${input.name} · `}
+                {input.gender === 0 ? '男' : '女'} · {input.year}年{input.month}月{input.day}日
+                <span className="text-[var(--text-muted)] ml-1">（{input.calendar === 0 ? '阳历' : '阴历'}）</span>
+              </p>
+              {result.lunarDate && (
+                <p className="text-[var(--text-muted)] text-xs mt-0.5">
+                  农历：{result.lunarDate.fullString}
+                </p>
+              )}
+            </>
           )}
         </div>
         <div className="flex gap-2">

@@ -1,7 +1,25 @@
 import mystilight from 'mystilight-8char'
 import type { BaziResult, BaziInput, DaYunItem } from './types'
+import { lunarToSolar, solarToLunar } from '../lunar'
 
 const { getCurrentEightCharJSON } = mystilight as any
+
+/**
+ * Resolve the effective solar date from a BaziInput.
+ * If calendar === 1 (lunar), converts lunar → solar first.
+ * Returns the solar date components that should be passed to the calculation engine.
+ */
+function resolveSolarDate(input: BaziInput, hour: number): { year: number; month: number; day: number } {
+  if (input.calendar === 1) {
+    try {
+      return lunarToSolar(input.year, input.month, input.day, hour, 0, 0)
+    } catch (e) {
+      console.warn('Lunar to solar conversion failed, falling back to raw input:', e)
+      return { year: input.year, month: input.month, day: input.day }
+    }
+  }
+  return { year: input.year, month: input.month, day: input.day }
+}
 
 // ── NaYin (纳音) lookup ──────────────────────────────────────────
 const GAN = '甲乙丙丁戊己庚辛壬癸'
@@ -49,11 +67,12 @@ export function calculateShenshaForDate(
   currentYun: BaziResult['currentYun']
 } {
   const hour = HOUR_TO_TIME[input.hour] ?? 0
+  const solar = resolveSolarDate(input, hour)
   const now = new Date()
   const data = getCurrentEightCharJSON({
-    year: input.year,
-    month: input.month,
-    day: input.day,
+    year: solar.year,
+    month: solar.month,
+    day: solar.day,
     hour: hour,
     minute: 0,
     second: 0,
@@ -86,14 +105,15 @@ export function calculateLiuYueForYear(
   targetYear: number,
 ): LiuYueItem[] {
   const hour = HOUR_TO_TIME[input.hour] ?? 0
+  const solar = resolveSolarDate(input, hour)
   const now = new Date()
   const results: LiuYueItem[] = []
 
   for (let m = 1; m <= 12; m++) {
     const data = getCurrentEightCharJSON({
-      year: input.year,
-      month: input.month,
-      day: input.day,
+      year: solar.year,
+      month: solar.month,
+      day: solar.day,
       hour: hour,
       minute: 0,
       second: 0,
@@ -165,11 +185,12 @@ export function calculateDaYunAllLiuNian(
 
 export function calculateBazi(input: BaziInput): BaziResult {
   const hour = HOUR_TO_TIME[input.hour] ?? 0
+  const solar = resolveSolarDate(input, hour)
 
   const data = getCurrentEightCharJSON({
-    year: input.year,
-    month: input.month,
-    day: input.day,
+    year: solar.year,
+    month: solar.month,
+    day: solar.day,
     hour: hour,
     minute: 0,
     second: 0,
@@ -236,6 +257,15 @@ export function calculateBazi(input: BaziInput): BaziResult {
     familyBackground: data.familyBackground || null,
     selfAppearance: data.selfAppearance || null,
     educationAndTalent: data.educationAndTalent || null,
+
+    // Lunar date info (derived from the effective solar date)
+    lunarDate: (() => {
+      try {
+        return solarToLunar(solar.year, solar.month, solar.day, hour, 0, 0)
+      } catch {
+        return null
+      }
+    })(),
 
     rawData: data,
   }

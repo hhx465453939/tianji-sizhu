@@ -98,4 +98,47 @@ describe('calculateBazi - known case verification', () => {
     const r2 = calculateBazi(future)
     expect(r2.yearGan).toBeTruthy()
   })
+
+  // ── Lunar input tests ─────────────────────────────────────────────
+
+  it('should produce the same result when lunar input matches solar equivalent', () => {
+    // Lunar 1990/5/15 = Solar 1990/6/7 (verified via lunar-javascript)
+    const solarInput: BaziInput = { year: 1990, month: 6, day: 7, hour: 6, gender: 0, calendar: 0 }
+    const lunarInput: BaziInput = { year: 1990, month: 5, day: 15, hour: 6, gender: 0, calendar: 1 }
+
+    const solarResult = calculateBazi(solarInput)
+    const lunarResult = calculateBazi(lunarInput)
+
+    // The four pillars should be identical
+    expect(lunarResult.yearGan).toBe(solarResult.yearGan)
+    expect(lunarResult.yearZhi).toBe(solarResult.yearZhi)
+    expect(lunarResult.monthGan).toBe(solarResult.monthGan)
+    expect(lunarResult.monthZhi).toBe(solarResult.monthZhi)
+    expect(lunarResult.dayGan).toBe(solarResult.dayGan)
+    expect(lunarResult.dayZhi).toBe(solarResult.dayZhi)
+    expect(lunarResult.hourGan).toBe(solarResult.hourGan)
+    expect(lunarResult.hourZhi).toBe(solarResult.hourZhi)
+  })
+
+  it('should produce different results for lunar vs raw solar of same numbers', () => {
+    // Without lunar conversion, 1990/5/15 as solar would be wrong
+    const wrongSolar: BaziInput = { year: 1990, month: 5, day: 15, hour: 3, gender: 0, calendar: 0 }
+    const correctLunar: BaziInput = { year: 1990, month: 5, day: 15, hour: 3, gender: 0, calendar: 1 }
+
+    const wrongResult = calculateBazi(wrongSolar)
+    const correctResult = calculateBazi(correctLunar)
+
+    // Day pillars should differ because the actual solar dates are different
+    expect(correctResult.dayGan).not.toBe(wrongResult.dayGan)
+  })
+
+  it('should have lunarDate for lunar input', () => {
+    const lunarInput: BaziInput = { year: 1990, month: 5, day: 15, hour: 3, gender: 0, calendar: 1 }
+    const result = calculateBazi(lunarInput)
+
+    expect(result.lunarDate).not.toBeNull()
+    expect(result.lunarDate!.year).toBe(1990)
+    expect(result.lunarDate!.month).toBe(5)
+    expect(result.lunarDate!.day).toBe(15)
+  })
 })

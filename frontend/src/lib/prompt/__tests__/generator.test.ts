@@ -67,6 +67,26 @@ describe('generatePrompt', () => {
       expect(prompt).toContain('神煞')
     }
   })
+
+  it('should include lunar date in prompt', () => {
+    const prompt = generatePrompt(result, input)
+    if (result.lunarDate) {
+      expect(prompt).toContain('农历')
+      expect(prompt).toContain(result.lunarDate.fullString)
+    }
+  })
+
+  it('should include lunar date for lunar input', () => {
+    const lunarInput: BaziInput = {
+      year: 1990, month: 5, day: 15, hour: 3, gender: 0, calendar: 1,
+    }
+    const lunarResult = calculateBazi(lunarInput)
+    const prompt = generatePrompt(lunarResult, lunarInput)
+    expect(prompt).toContain('阴历')
+    expect(prompt).toContain('农历')
+    expect(lunarResult.lunarDate).not.toBeNull()
+    expect(prompt).toContain(lunarResult.lunarDate!.fullString)
+  })
 })
 
 describe('getTemplateList', () => {

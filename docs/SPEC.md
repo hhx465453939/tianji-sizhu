@@ -2,8 +2,8 @@
 
 > **天机四柱** — 开源四柱排盘，为 AI 解读而生
 
-**版本**: v1.1.0
-**日期**: 2026-06-11
+**版本**: v1.1.2
+**日期**: 2026-06-12
 **状态**: Released
 
 ---
@@ -154,7 +154,19 @@ CREATE INDEX idx_charts_name ON charts(name);
 CREATE INDEX idx_charts_created ON charts(created_at);
 ```
 
-### 4.2 chart_data JSON 结构（核心数据模型）
+### 4.2 历法支持
+
+系统支持阳历和阴历两种输入方式：
+
+- **阳历输入**（calendar=0）：直接传入排盘引擎计算
+- **阴历输入**（calendar=1）：先通过 `lunar-javascript` 库转换为阳历，再传入排盘引擎
+
+无论用户输入哪种历法，系统都会：
+1. 计算出对应的阴历日期信息（干支年+中文月日）
+2. 在排盘结果页头部展示阴历日期
+3. 在 AI Prompt 中包含阴历日期行，供 AI 解读时参考
+
+### 4.3 chart_data JSON 结构（核心数据模型）
 
 ```jsonc
 {
@@ -218,6 +230,7 @@ CREATE INDEX idx_charts_created ON charts(created_at);
 ## 基本信息
 - 性别：{gender}
 - 出生：{birth_datetime}（{calendar}）
+- 农历：{lunar_date_string}
 
 ## 四柱
 {formatted_four_pillars}
@@ -383,6 +396,24 @@ tianji-sizhu/
 ---
 
 ## 附录 A: 变更日志
+
+### v1.1.2 (2026-06-12)
+
+**修复：阴历信息支持**
+
+#### 🐛 修复
+
+- **阴历输入排盘错误**：用户选择"阴历"后，日期现在会正确转换为阳历再传入排盘引擎（之前直接当阳历计算，结果错误）
+- **UI 缺失阴历展示**：排盘结果页头部现在显示农历日期（如"农历：庚午年五月十五"）
+- **AI Prompt 缺失阴历**：生成的提示词中增加"农历"信息行，AI 可据此输出完整报告
+
+#### 🆕 新增
+
+- 新增 `lunar-javascript` 依赖用于阴历↔阳历转换
+- 新增 `frontend/src/lib/lunar.ts` 历法转换工具模块
+- `BaziResult` 新增 `lunarDate` 字段（含干支年、中文月日等）
+
+---
 
 ### v1.1.0 (2026-06-11)
 

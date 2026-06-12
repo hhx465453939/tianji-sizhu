@@ -1,4 +1,5 @@
 import type { WuXing } from 'mystilight-8char'
+import type { LunarDateInfo } from '../lunar'
 
 export interface BaziPillar {
   gan: string
@@ -125,6 +126,9 @@ export interface BaziResult {
   selfAppearance?: any
   /** Education and talent analysis */
   educationAndTalent?: any
+
+  // Lunar date info (converted from the effective solar date)
+  lunarDate: LunarDateInfo | null
 
   // Raw data for export
   rawData: any
