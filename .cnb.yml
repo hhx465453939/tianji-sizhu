@@ -1,4 +1,100 @@
+# ============================================================
+# TianJi-SiZhu CNB Pipeline
+# ============================================================
+
+# ── Release Pipeline: tag push 触发构建 + 发布 ──────────────
 $:
+  tag_push:
+    - runner:
+        tags: cnb:arch:amd64
+        cpus: 4
+      docker:
+        image: golang:1.23
+        volumes:
+          - /root/go/pkg
+          - /root/.cache
+          - /root/.npm
+      stages:
+        - name: install system deps
+          script: |
+            apt-get update -qq
+            apt-get install -y -qq \
+              nodejs npm \
+              nsis \
+              gcc-mingw-w64-x86-64 \
+              zip \
+              > /dev/null 2>&1
+            echo "Node: $(node --version)"
+            echo "Go: $(go version)"
+
+        - name: install wails
+          script: |
+            go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+            export PATH="$(go env GOPATH)/bin:$PATH"
+            wails version
+
+        - name: build windows
+          env:
+            CGO_ENABLED: "1"
+            CC: x86_64-w64-mingw32-gcc
+            CXX: x86_64-w64-mingw32-g++
+          script: |
+            export PATH="$(go env GOPATH)/bin:$PATH"
+            wails build -platform windows/amd64 -nsis
+            echo "=== Windows build output ==="
+            ls -la build/bin/ || echo "No build/bin"
+            find build/bin -type f -name "*.exe" | head -10
+
+        - name: build linux
+          script: |
+            export PATH="$(go env GOPATH)/bin:$PATH"
+            wails build -platform linux/amd64
+            echo "=== Linux build output ==="
+            ls -la build/bin/
+
+        - name: package artifacts
+          script: |
+            TAG="${CNB_BRANCH}"
+            mkdir -p release
+            # Windows exe / installer
+            INSTALLER=$(find build/bin -type f -name "*installer*" | head -1)
+            if [ -n "$INSTALLER" ]; then
+              cp "$INSTALLER" "release/tianji-sizhu-${TAG}-windows-amd64-installer.exe"
+            fi
+            PLAIN_EXE=$(find build/bin -type f -name "tianji-sizhu.exe" | head -1)
+            if [ -n "$PLAIN_EXE" ]; then
+              cp "$PLAIN_EXE" "release/tianji-sizhu-${TAG}-windows-amd64.exe"
+            fi
+            # Linux binary
+            if [ -f "build/bin/tianji-sizhu" ]; then
+              tar czf "release/tianji-sizhu-${TAG}-linux-amd64.tar.gz" -C build/bin tianji-sizhu
+            fi
+            echo "=== Release artifacts ==="
+            ls -la release/
+
+        - name: create release
+          type: git:release
+          options:
+            title: "TianJi-SiZhu ${CNB_BRANCH}"
+            description: |
+              ## 天机四柱 ${CNB_BRANCH}
+
+              开源四柱排盘桌面客户端，为 AI 解读而生。
+
+              ### 下载
+              | 平台 | 文件 |
+              |------|------|
+              | Windows (安装程序) | *-installer.exe |
+              | Windows (免安装) | *-windows-amd64.exe |
+              | Linux | *-linux-amd64.tar.gz |
+
+        - name: upload attachments
+          image: cnbcool/attachments:latest
+          settings:
+            attachments:
+              - "./release/*"
+
+  # ── VS Code Cloud IDE ───────────────────────────────────────
   vscode:
     - docker:
         image: docker.cnb.cool/ciallo.cv/default-dev-env:latest
