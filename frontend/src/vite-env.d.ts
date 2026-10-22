@@ -1,5 +1,8 @@
 /// <reference types="vite/client" />
 
+// Injected by vite.config.ts `define` from frontend/package.json.
+declare const __APP_VERSION__: string
+
 // Type declaration for lunar-javascript (no @types package available)
 declare module 'lunar-javascript' {
   export class Solar {

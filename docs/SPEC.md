@@ -39,24 +39,34 @@
 
 ```
 ┌─────────────────────────────────────────────┐
-│              TianJi Desktop App             │
-├─────────────────────────────────────────────┤
-│  Frontend (WebView)                         │
-│  ├── React 18 + TypeScript                  │
+│         TianJi Frontend (single dist/)      │
+│  React 18 + TypeScript + Tailwind + ECharts │
 │  ├── mystilight-8char (排盘核心算法)         │
-│  ├── TailwindCSS (样式)                     │
-│  ├── ECharts / D3.js (数据可视化)           │
-│  └── Vite (构建工具)                        │
-├─────────────────────────────────────────────┤
-│  Wails Runtime (Go ↔ JS Bridge)            │
-├─────────────────────────────────────────────┤
-│  Backend (Go)                               │
-│  ├── SQLite (go-sqlite3 / modernc-sqlite)   │
-│  ├── 剪贴板操作                              │
-│  ├── 文件系统 (导入/导出)                    │
-│  └── 系统原生交互 (对话框/通知)              │
-└─────────────────────────────────────────────┘
+│  ├── lib/platform  平台适配层（数据/剪贴板/导出）│
+│  └── lib/theme     明暗双主题 token 运行时    │
+└───────────────┬──────────────────┬──────────┘
+                │                  │
+        Wails (桌面)         Capacitor 8 (Android)
+                │                  │
+     Go + SQLite (charts.db)   WebView + localStorage
 ```
+
+### 2.1.1 平台矩阵
+
+| 平台 | 壳 | 数据层 | 原生能力 |
+|------|----|--------|---------|
+| Windows / macOS / Linux | Wails v2 | SQLite（`internal/database`） | 原生保存对话框、系统剪贴板 |
+| Android（arm64-v8a / armeabi-v7a / x86 / x86_64 / universal） | Capacitor 8 | localStorage（`lib/platform/web.ts`） | Web Share / Blob 下载、`navigator.clipboard` |
+
+两端的 `lib/platform` 接口一致（`saveChart/getChart/listCharts/deleteChart/exportJSON/copyText/saveFile`），字段命名与 SQLite `charts` 表逐字段对齐，导出 JSON 可双向迁移。
+
+### 2.1.2 主题系统
+
+- `[data-theme="light|dark"]` 挂在 `<html>`，切换 CSS 变量通道值
+- Tailwind 颜色全部映射为 `rgb(var(--token) / <alpha-value>)`，旧类名（`bg-ink-800` / `text-gold`）自动跟随主题
+- **明亮（宣纸晨光）为默认**，暗色（玄墨夜观）可在导航栏 / 结果页 / 设置页切换，偏好存 `localStorage['tianji.theme']`
+- 首帧前由 `main.tsx` 调用 `initTheme()`，无闪烁；桌面端同步 Wails 窗口主题
+
 
 ### 2.2 职责划分
 
@@ -119,14 +129,18 @@
 | 一键复制 | 点击按钮将完整 Prompt 写入系统剪贴板 |
 | 模板可选 | 提供多种 Prompt 风格（简洁版/详尽版/特定主题） |
 
-### 3.5 未来扩展（P1 - 后续迭代）
+### 3.5 已实现扩展（原 P1 计划）
 
-- 多主题切换（国风暗色/淡雅浅色/极简现代）
+- [x] **多主题切换**：明亮（默认）/ 暗色双主题，见 §2.1.2
+- [x] **Android 客户端**：Capacitor 壳 + 多 ABI APK，见 §2.1.1
+
+### 3.6 未来扩展（P1 - 后续迭代）
+
 - 批量排盘（导入 CSV 批量生成）
 - 八字对比（双人合盘）
 - 内置 AI 直连（可选配置 API Key 后应用内直接获得解读）
 - 打印/PDF 导出
-- macOS / Linux 跨平台支持
+- iOS 客户端（复用 Capacitor 工程与平台适配层）
 
 ---
 
@@ -365,10 +379,10 @@ tianji-sizhu/
 |----|------|
 | 启动时间 | < 2s |
 | 排盘计算 | < 100ms |
-| 安装包体积 | < 20MB |
+| 安装包体积 | 桌面 < 20MB；Android 单 ABI ≈ 3.8MB |
 | 内存占用 | < 100MB |
-| 离线可用 | 全部核心功能不依赖网络 |
-| 系统要求 | Windows 10+ x64 |
+| 离线可用 | 全部核心功能不依赖网络（Android 仅申请 INTERNET 用于 WebView 本地资源加载） |
+| 系统要求 | Windows 10+ x64 / macOS 11+ / Linux x64 / Android 7.0+（minSdk 24） |
 
 ---
 

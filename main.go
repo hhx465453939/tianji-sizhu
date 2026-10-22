@@ -18,10 +18,14 @@ func main() {
 		Title:  "天机四柱",
 		Width:  1280,
 		Height: 800,
+		MinWidth:  960,
+		MinHeight: 640,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
+		// Silk paper default; matches the light theme in frontend/src/style.css
+		// so the native window never flashes black before the webview paints.
+		BackgroundColour: &options.RGBA{R: 246, G: 241, B: 231, A: 1},
 		OnStartup:        app.startup,
 		OnShutdown:       app.shutdown,
 		Bind: []interface{}{

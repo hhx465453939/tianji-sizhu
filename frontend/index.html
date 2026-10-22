@@ -1,13 +1,46 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN" data-theme="light">
 <head>
     <meta charset="UTF-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>tianji-init</title>
+    <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+    <meta name="theme-color" content="#F6F1E7"/>
+    <meta name="description" content="天机四柱 — 开源四柱排盘，为 AI 解读而生"/>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='2' fill='%23B23A28'/%3E%3Cpath d='M9 9h14M9 14h14M9 19h14M9 24h14' stroke='%23F5F0E6' stroke-width='2' stroke-linecap='square'/%3E%3C/svg%3E"/>
+    <title>天机四柱</title>
+    <script>
+      // Boot diagnostics: if the bundle fails to load, show the reason instead of a blank page.
+      // Kept in production on purpose - a silent white screen is the worst failure mode.
+      (function () {
+        function show(msg) {
+          try {
+            var d = document.getElementById('boot-error');
+            if (!d) {
+              d = document.createElement('pre');
+              d.id = 'boot-error';
+              d.style.cssText = 'position:fixed;inset:0;margin:0;padding:16px;font:12px/1.5 monospace;color:#B23A28;background:#F5F0E6;white-space:pre-wrap;z-index:99999;overflow:auto';
+              (document.body || document.documentElement).appendChild(d);
+            }
+            d.textContent += msg + '\n\n';
+          } catch (_) {}
+        }
+        window.addEventListener('error', function (e) {
+          if (e.target && e.target.tagName === 'SCRIPT') { show('SCRIPT LOAD FAIL: ' + e.target.src); return; }
+          show('ERROR: ' + (e.message || e.error) + '\n  at ' + (e.filename || '?') + ':' + (e.lineno || '?'));
+        }, true);
+        window.addEventListener('unhandledrejection', function (e) {
+          show('UNHANDLED REJECTION: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason));
+        });
+      })();
+    </script>
+    <style>
+      /* Paint the silk background before CSS loads to avoid a flash. */
+      html, body { background-color: #F5F0E6; }
+      html[data-theme='dark'], html[data-theme='dark'] body { background-color: #14100C; }
+      body { margin: 0; }
+    </style>
 </head>
 <body>
 <div id="root"></div>
 <script src="./src/main.tsx" type="module"></script>
 </body>
 </html>
-

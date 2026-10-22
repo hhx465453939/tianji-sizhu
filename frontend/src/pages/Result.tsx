@@ -13,6 +13,10 @@ import LiuYuePanel from '../components/LiuYuePanel'
 import ShenshaPanel from '../components/ShenshaPanel'
 import RelationsPanel from '../components/RelationsPanel'
 import DetailedAnalysis from '../components/DetailedAnalysis'
+import ThemeToggle from '../components/ThemeToggle'
+import { platform } from '../lib/platform'
+
+const sectionTitle = 'mb-2 border-b border-line-1 pb-2 font-heading text-xs tracking-wide-cn text-accent-gold'
 
 function Result() {
   const location = useLocation()
@@ -20,6 +24,7 @@ function Result() {
   const [result, setResult] = useState<BaziResult | null>(null)
   const [error, setError] = useState<string>('')
   const [copied, setCopied] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [template, setTemplate] = useState<PromptTemplate>('comprehensive')
 
   // DaYun / LiuNian selection state
@@ -174,36 +179,7 @@ function Result() {
     }
 
     const prompt = generatePrompt(result, input, template, promptContext)
-    let success = false
-
-    if (navigator.clipboard?.writeText) {
-      try {
-        await navigator.clipboard.writeText(prompt)
-        success = true
-      } catch { /* blocked on non-secure context */ }
-    }
-
-    if (!success && (window as any)?.go?.main) {
-      try {
-        const { CopyToClipboard } = await import('../../wailsjs/go/main/App')
-        await CopyToClipboard(prompt)
-        success = true
-      } catch { /* Wails not available */ }
-    }
-
-    if (!success) {
-      try {
-        const textarea = document.createElement('textarea')
-        textarea.value = prompt
-        textarea.style.position = 'fixed'
-        textarea.style.opacity = '0'
-        document.body.appendChild(textarea)
-        textarea.select()
-        document.execCommand('copy')
-        document.body.removeChild(textarea)
-        success = true
-      } catch { /* last resort failed */ }
-    }
+    const success = await platform.copyText(prompt)
 
     setCopied(success)
     setTimeout(() => setCopied(false), 2000)
@@ -212,16 +188,19 @@ function Result() {
   const handleSave = async () => {
     if (!result || !input) return
     try {
-      const { SaveChart } = await import('../../wailsjs/go/main/App')
-      await SaveChart(
-        input.name || '未命名',
-        input.gender,
-        input.year, input.month, input.day, input.hour,
-        input.calendar,
-        JSON.stringify(result.rawData),
-        ''
-      )
-      alert('保存成功！')
+      await platform.saveChart({
+        name: input.name || '未命名',
+        gender: input.gender,
+        birthYear: input.year,
+        birthMonth: input.month,
+        birthDay: input.day,
+        birthHour: input.hour,
+        calendar: input.calendar,
+        chartData: JSON.stringify(result.rawData),
+        notes: '',
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
     } catch (e) {
       console.error('save failed', e)
     }
@@ -229,52 +208,66 @@ function Result() {
 
   if (error) {
     return (
-      <div className="p-8 max-w-4xl mx-auto">
-        <div className="panel-traditional p-4 border-cinnabar/40">
-          <p className="text-cinnabar-light">排盘计算出错：{error}</p>
-          <button onClick={() => navigate('/')} className="mt-4 px-4 py-2 bg-ink-700 border border-bronze/30 rounded-sm text-sm">返回</button>
+      <div className="page-shell">
+        <div className="panel-traditional border-accent-seal/40 p-4">
+          <p className="text-accent-seal">排盘计算出错：{error}</p>
+          <button
+            onClick={() => navigate('/')}
+            className="mt-4 rounded-sm border border-line-1 bg-surface-3 px-4 py-2 text-sm text-fg-2"
+          >
+            返回
+          </button>
         </div>
       </div>
     )
   }
 
-  if (!result) return <div className="p-8 text-center text-[var(--text-secondary)]">计算中...</div>
+  if (!result) {
+    return <div className="page-shell py-16 text-center text-fg-3">计算中...</div>
+  }
 
   const isViewingCurrent = (selectedDaYunYear ?? currentDaYunStart) === currentDaYunStart
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="page-shell">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-xl font-semibold font-heading text-gold tracking-wide-cn">排盘结果</h1>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3 md:mb-6">
+        <div className="min-w-0">
+          <h1 className="font-heading text-lg tracking-wide-cn text-fg-1 md:text-xl">排盘结果</h1>
           {input && (
             <>
-              <p className="text-[var(--text-secondary)] text-sm mt-1">
+              <p className="mt-1 text-sm text-fg-2">
                 {input.name && `${input.name} · `}
                 {input.gender === 0 ? '男' : '女'} · {input.year}年{input.month}月{input.day}日
-                <span className="text-[var(--text-muted)] ml-1">（{input.calendar === 0 ? '阳历' : '阴历'}）</span>
+                <span className="ml-1 text-fg-muted">（{input.calendar === 0 ? '阳历' : '阴历'}）</span>
               </p>
               {result.lunarDate && (
-                <p className="text-[var(--text-muted)] text-xs mt-0.5">
+                <p className="mt-0.5 text-xs text-fg-muted">
                   农历：{result.lunarDate.fullString}
                 </p>
               )}
             </>
           )}
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => navigate('/')} className="px-4 py-2 bg-ink-700 hover:bg-ink-600 border border-bronze/30 rounded-sm text-sm transition-colors">
+        <div className="flex items-center gap-2">
+          <ThemeToggle withLabel />
+          <button
+            onClick={() => navigate('/')}
+            className="rounded-sm border border-line-1 bg-surface-3 px-3 py-2 text-sm text-fg-2 transition-colors hover:border-accent-gold/40 hover:text-fg-1 md:px-4"
+          >
             返回
           </button>
-          <button onClick={handleSave} className="px-4 py-2 bg-jade-dark hover:bg-jade border border-jade/30 rounded-sm text-sm transition-colors">
-            保存
+          <button
+            onClick={handleSave}
+            className="rounded-sm border border-accent-jade/40 bg-accent-jade/12 px-3 py-2 text-sm text-accent-jade transition-colors hover:bg-accent-jade/20 md:px-4"
+          >
+            {saved ? '已保存 ✓' : '保存'}
           </button>
         </div>
       </div>
 
       {/* Four Pillars */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="mb-5 grid grid-cols-2 gap-2.5 md:mb-6 md:grid-cols-4 md:gap-3">
         <PillarCard label="年柱" pillar={result.pillars.year} />
         <PillarCard label="月柱" pillar={result.pillars.month} />
         <PillarCard label="日柱" pillar={result.pillars.day} />
@@ -282,11 +275,13 @@ function Result() {
       </div>
 
       {/* Day Master & Special Pillars */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      <div className="mb-5 grid gap-3 md:mb-6 md:grid-cols-2 md:gap-4">
         <div className="panel-traditional p-4">
-          <h3 className="text-xs text-gold/70 mb-2 font-heading tracking-wide-cn border-b border-bronze/20 pb-2">日主</h3>
-          <div className="text-2xl font-bold font-ganzhi text-parchment-100">{result.dayMaster}（{result.dayMasterWuXing}）</div>
-          <div className="text-sm text-[var(--text-secondary)] mt-2">
+          <h3 className={sectionTitle}>日主</h3>
+          <div className="font-ganzhi text-xl font-bold text-fg-1 md:text-2xl">
+            {result.dayMaster}（{result.dayMasterWuXing}）
+          </div>
+          <div className="mt-2 text-sm text-fg-2">
             {typeof result.yuanHaiZiping.shenQiang === 'object'
               ? `${result.yuanHaiZiping.shenQiang.judge}（得分：${result.yuanHaiZiping.shenQiang.score}）`
               : `身强指数：${result.yuanHaiZiping.shenQiang}`}
@@ -297,8 +292,8 @@ function Result() {
           </div>
         </div>
         <div className="panel-traditional p-4">
-          <h3 className="text-xs text-gold/70 mb-2 font-heading tracking-wide-cn border-b border-bronze/20 pb-2">特殊宫位</h3>
-          <div className="grid grid-cols-2 gap-2 text-sm text-[var(--text-secondary)]">
+          <h3 className={sectionTitle}>特殊宫位</h3>
+          <div className="grid grid-cols-1 gap-2 text-sm text-fg-2 sm:grid-cols-2">
             <div>胎元：{result.taiYuan}（{result.taiYuanNaYin}）</div>
             <div>命宫：{result.mingGong}（{result.mingGongNaYin}）</div>
             <div>胎息：{result.taiXi}（{result.taiXiNaYin}）</div>
@@ -308,33 +303,33 @@ function Result() {
       </div>
 
       {/* Five Elements Radar */}
-      <div className="mb-6">
+      <div className="mb-5 md:mb-6">
         <FiveElementRadar wuXingPower={result.wuXingPower} />
       </div>
 
       {/* Fortune start info */}
       {result.yunInfo.startSolar && (
-        <div className="panel-traditional p-4 mb-6">
-          <h3 className="text-xs text-gold/70 mb-2 font-heading tracking-wide-cn border-b border-bronze/20 pb-2">起运信息</h3>
-          <div className="grid grid-cols-3 gap-4 text-sm text-[var(--text-secondary)]">
+        <div className="panel-traditional mb-5 p-4 md:mb-6">
+          <h3 className={sectionTitle}>起运信息</h3>
+          <div className="grid grid-cols-1 gap-2 text-sm text-fg-2 sm:grid-cols-3 sm:gap-4">
             <div>
-              <span className="text-[var(--text-muted)]">排盘方式：</span>
-              <span className="text-parchment-100">{result.yunInfo.forward ? '顺排' : '逆排'}</span>
+              <span className="text-fg-muted">排盘方式：</span>
+              <span className="text-fg-1">{result.yunInfo.forward ? '顺排' : '逆排'}</span>
             </div>
             <div>
-              <span className="text-[var(--text-muted)]">起运年龄：</span>
-              <span className="text-parchment-100">{result.yunInfo.startYear}岁{result.yunInfo.startMonth ? ` ${result.yunInfo.startMonth}个月` : ''}</span>
+              <span className="text-fg-muted">起运年龄：</span>
+              <span className="text-fg-1">{result.yunInfo.startYear}岁{result.yunInfo.startMonth ? ` ${result.yunInfo.startMonth}个月` : ''}</span>
             </div>
             <div>
-              <span className="text-[var(--text-muted)]">起运时间：</span>
-              <span className="text-parchment-100">{result.yunInfo.startSolar}</span>
+              <span className="text-fg-muted">起运时间：</span>
+              <span className="text-fg-1">{result.yunInfo.startSolar}</span>
             </div>
           </div>
         </div>
       )}
 
       {/* DaYun Timeline (clickable) */}
-      <div className="mb-6">
+      <div className="mb-5 md:mb-6">
         <DaYunTimeline
           dayunArr={result.dayunArr}
           currentStartYear={currentDaYunStart}
@@ -345,7 +340,7 @@ function Result() {
 
       {/* LiuNian List for selected DaYun */}
       {selectedDaYun && (
-        <div className="mb-6">
+        <div className="mb-5 md:mb-6">
           <LiuNianList
             dayun={selectedDaYun}
             selectedLiuNianYear={selectedLiuNianYear}
@@ -356,43 +351,43 @@ function Result() {
 
       {/* Selected DaYun / LiuNian Info */}
       {selectedDaYun && (
-        <div className="panel-traditional p-4 mb-6">
-          <h3 className="text-xs text-gold/70 mb-2 font-heading tracking-wide-cn border-b border-bronze/20 pb-2">
+        <div className="panel-traditional mb-5 p-4 md:mb-6">
+          <h3 className={sectionTitle}>
             {isViewingCurrent ? '当前运势' : '运势详情'}
           </h3>
-          <div className="flex gap-6 flex-wrap">
+          <div className="flex flex-wrap gap-x-6 gap-y-3">
             <div>
-              <span className="text-[var(--text-tertiary)] text-sm">大运：</span>
-              <span className="text-lg font-bold font-ganzhi text-parchment-100">
+              <span className="text-sm text-fg-3">大运：</span>
+              <span className="font-ganzhi text-lg font-bold text-fg-1">
                 {Array.isArray(selectedDaYun.ganZhi)
                   ? selectedDaYun.ganZhi.join('')
                   : selectedDaYun.ganZhi}
               </span>
-              <span className="text-xs text-[var(--text-muted)] ml-1">
+              <span className="ml-1 text-xs text-fg-muted">
                 {getNaYin(Array.isArray(selectedDaYun.ganZhi) ? selectedDaYun.ganZhi.join('') : selectedDaYun.ganZhi)}
               </span>
-              <span className="text-xs text-[var(--text-muted)] ml-2">
+              <span className="ml-2 text-xs text-fg-muted">
                 ({selectedDaYun.startYear}-{(selectedDaYun.startYear + 9)}年)
               </span>
-              <span className="text-xs text-[var(--text-tertiary)] ml-2">
+              <span className="ml-2 text-xs text-fg-3">
                 {selectedDaYun.ganshen}/{selectedDaYun.zhishen}
               </span>
             </div>
             {selectedLiuNian && (
               <div>
-                <span className="text-[var(--text-tertiary)] text-sm">流年：</span>
-                <span className="text-lg font-bold font-ganzhi text-parchment-100">
+                <span className="text-sm text-fg-3">流年：</span>
+                <span className="font-ganzhi text-lg font-bold text-fg-1">
                   {Array.isArray(selectedLiuNian.ganZhi)
                     ? selectedLiuNian.ganZhi.join('')
                     : selectedLiuNian.ganZhi}
                 </span>
-                <span className="text-xs text-[var(--text-muted)] ml-1">
+                <span className="ml-1 text-xs text-fg-muted">
                   {getNaYin(Array.isArray(selectedLiuNian.ganZhi) ? selectedLiuNian.ganZhi.join('') : selectedLiuNian.ganZhi)}
                 </span>
-                <span className="text-xs text-[var(--text-muted)] ml-2">
+                <span className="ml-2 text-xs text-fg-muted">
                   ({selectedLiuNian.year}年)
                 </span>
-                <span className="text-xs text-[var(--text-tertiary)] ml-2">
+                <span className="ml-2 text-xs text-fg-3">
                   {selectedLiuNian.ganshen}/{selectedLiuNian.zhishen}
                 </span>
               </div>
@@ -401,17 +396,17 @@ function Result() {
 
           {/* DaYun & LiuNian Shensha inline */}
           {displayShensha?.current && (
-            <div className="mt-3 border-t border-bronze/20 pt-3">
-              <div className="flex flex-wrap gap-1.5 mb-2">
+            <div className="mt-3 border-t border-line-2 pt-3">
+              <div className="mb-2 flex flex-wrap gap-1.5">
                 {displayShensha.current.daYun?.map((s, i) => (
-                  <span key={`dy-${i}`} className="px-2 py-0.5 rounded-sm text-xs border-2 border-gold/40 bg-gold/10 text-gold font-heading">
+                  <span key={`dy-${i}`} className="rounded-sm border-2 border-accent-gold/45 bg-accent-gold/10 px-2 py-0.5 font-heading text-xs text-accent-gold">
                     大运·{s}
                   </span>
                 ))}
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {displayShensha.current.liuNian?.map((s, i) => (
-                  <span key={`ln-${i}`} className="px-2 py-0.5 rounded-sm text-xs border-2 border-jade/40 bg-jade/10 text-jade-light font-heading">
+                  <span key={`ln-${i}`} className="rounded-sm border-2 border-accent-jade/45 bg-accent-jade/10 px-2 py-0.5 font-heading text-xs text-accent-jade">
                     流年·{s}
                   </span>
                 ))}
@@ -423,9 +418,9 @@ function Result() {
 
       {/* LiuYue Panel - 12 months grid with shensha on click */}
       {selectedLiuNian && (
-        <div className="mb-6">
+        <div className="mb-5 md:mb-6">
           {liuyueLoading ? (
-            <div className="panel-traditional p-4 text-center text-[var(--text-secondary)]">
+            <div className="panel-traditional p-4 text-center text-fg-3">
               计算流月中...
             </div>
           ) : (
@@ -441,9 +436,9 @@ function Result() {
 
       {/* Analysis */}
       {result.analysis.XiYongShen && result.analysis.XiYongShen.length > 0 && (
-        <div className="panel-traditional p-4 mb-6">
-          <h3 className="text-xs text-gold/70 mb-2 font-heading tracking-wide-cn border-b border-bronze/20 pb-2">喜用神</h3>
-          <div className="text-sm space-y-1 text-[var(--text-secondary)]">
+        <div className="panel-traditional mb-5 p-4 md:mb-6">
+          <h3 className={sectionTitle}>喜用神</h3>
+          <div className="space-y-1 text-sm text-fg-2">
             {result.analysis.XiYongShen.map((s, i) => (
               <div key={i}>{typeof s === 'string' ? s : (s as any)?.judge || JSON.stringify(s)}</div>
             ))}
@@ -453,33 +448,33 @@ function Result() {
 
       {/* Shensha Panel - pillar shensha (always shown) */}
       {displayShensha && (
-        <div className="mb-6">
+        <div className="mb-5 md:mb-6">
           <ShenshaPanel shensha={displayShensha} />
         </div>
       )}
 
       {/* Relations Panel */}
-      <div className="mb-6">
+      <div className="mb-5 md:mb-6">
         <RelationsPanel ganRelations={result.ganRelations} zhiRelations={result.zhiRelations} />
       </div>
 
       {/* Detailed Analysis Accordion */}
-      <div className="mb-6">
+      <div className="mb-5 md:mb-6">
         <DetailedAnalysis result={result} />
       </div>
 
       {/* AI Prompt Section */}
-      <div className="panel-traditional p-5 mb-6 border-gold/30">
-        <h3 className="text-xs text-gold/70 mb-3 font-heading tracking-wide-cn border-b border-bronze/20 pb-2">AI 命理分析</h3>
-        <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="panel-traditional mb-6 border-accent-gold/35 p-4 md:p-5">
+        <h3 className={sectionTitle}>AI 命理分析</h3>
+        <div className="mb-4 flex flex-wrap gap-2">
           {getTemplateList().map(t => (
             <button
               key={t.key}
               onClick={() => setTemplate(t.key)}
-              className={`px-3 py-1 rounded-sm text-xs font-heading transition-colors ${
+              className={`rounded-sm border px-2.5 py-1 font-heading text-xs transition-colors md:px-3 ${
                 template === t.key
-                  ? 'bg-gold/20 text-gold border border-gold/50'
-                  : 'bg-ink-700 text-[var(--text-secondary)] border border-bronze/20 hover:bg-ink-600 hover:text-parchment-100'
+                  ? 'border-accent-gold/55 bg-accent-gold/18 text-accent-gold'
+                  : 'border-line-1 bg-surface-3 text-fg-2 hover:border-accent-gold/35 hover:text-fg-1'
               }`}
             >
               {t.label}
@@ -488,11 +483,11 @@ function Result() {
         </div>
         <button
           onClick={handleCopyPrompt}
-          className="w-full py-3 btn-primary-cn rounded-sm font-heading tracking-traditional"
+          className="btn-primary-cn w-full rounded-sm py-3 font-heading tracking-traditional"
         >
           {copied ? '已复制到剪贴板 ✓' : '一键复制 Prompt'}
         </button>
-        <p className="text-xs text-[var(--text-muted)] mt-3 text-center">
+        <p className="mt-3 text-center text-xs text-fg-muted">
           复制后粘贴到 DeepSeek / ChatGPT / Claude 等 AI 对话中即可获得命理解读
         </p>
       </div>

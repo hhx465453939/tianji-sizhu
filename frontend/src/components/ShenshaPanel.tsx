@@ -16,21 +16,21 @@ const PILLAR_LABELS = [
 ] as const
 
 const SHENSHA_COLORS: Record<string, string> = {
-  '贵人': 'border-gold bg-gold/10 text-gold',
-  '桃花': 'border-cinnabar/60 bg-cinnabar/10 text-cinnabar-light',
-  '驿马': 'border-water bg-water/10 text-[#6b9bc3]',
-  '华盖': 'border-[#7c5cbf] bg-[#7c5cbf]/10 text-[#b69cf0]',
-  '将星': 'border-cinnabar bg-cinnabar/15 text-cinnabar-light',
-  '禄': 'border-wood bg-wood/10 text-jade-light',
-  '羊刃': 'border-cinnabar-dark bg-cinnabar-dark/15 text-cinnabar',
-  '福星': 'border-gold bg-gold/10 text-gold-light',
+  '贵人': 'border-accent-gold bg-accent-gold/10 text-accent-gold',
+  '桃花': 'border-accent-seal/60 bg-accent-seal/10 text-accent-seal',
+  '驿马': 'border-accent-azure bg-accent-azure/10 text-accent-azure',
+  '华盖': 'border-accent-violet bg-accent-violet/10 text-accent-violet',
+  '将星': 'border-accent-seal bg-accent-seal/15 text-accent-seal',
+  '禄': 'border-wx-wood bg-wx-wood/10 text-accent-jade',
+  '羊刃': 'border-accent-seal bg-accent-seal/15 text-accent-seal',
+  '福星': 'border-accent-gold bg-accent-gold/10 text-accent-gold-strong',
 }
 
 function getShenshaStyle(name: string): string {
   for (const [keyword, style] of Object.entries(SHENSHA_COLORS)) {
     if (name.includes(keyword)) return style
   }
-  return 'border-bronze/50 bg-bronze/10 text-[var(--text-secondary)]'
+  return 'border-line-1 bg-surface-3/60 text-fg-2'
 }
 
 export default function ShenshaPanel({ shensha }: Props) {
@@ -42,20 +42,20 @@ export default function ShenshaPanel({ shensha }: Props) {
 
   return (
     <div className="panel-traditional p-4">
-      <h3 className="text-xs text-gold/70 mb-3 font-heading tracking-wide-cn">神煞</h3>
+      <h3 className="mb-3 font-heading text-xs tracking-wide-cn text-accent-gold">神煞</h3>
 
-      <div className="space-y-2.5 mb-4">
+      <div className="mb-4 space-y-2.5">
         {PILLAR_LABELS.map(({ key, label }) => {
           const items = shensha[key] || []
           if (items.length === 0) return null
           return (
             <div key={key} className="flex items-start gap-2">
-              <span className="text-xs text-[var(--text-muted)] w-10 flex-shrink-0 pt-0.5 font-heading">{label}</span>
+              <span className="w-10 flex-shrink-0 pt-0.5 font-heading text-xs text-fg-muted">{label}</span>
               <div className="flex flex-wrap gap-1.5">
                 {items.map((s, i) => (
                   <span
                     key={i}
-                    className={`px-2 py-0.5 rounded-sm text-xs border-2 font-heading tracking-wide-cn ${getShenshaStyle(s)}`}
+                    className={`rounded-sm border-2 px-2 py-0.5 font-heading text-xs tracking-wide-cn ${getShenshaStyle(s)}`}
                   >
                     {s}
                   </span>
@@ -67,26 +67,26 @@ export default function ShenshaPanel({ shensha }: Props) {
       </div>
 
       {hasCurrentShensha && (
-        <div className="border-t border-bronze/20 pt-3">
-          <div className="text-xs text-[var(--text-muted)] mb-2 font-heading">当前运势神煞</div>
+        <div className="border-t border-line-2 pt-3">
+          <div className="mb-2 font-heading text-xs text-fg-muted">当前运势神煞</div>
           <div className="flex flex-wrap gap-1.5">
             {shensha.current?.daYun?.map((s, i) => (
-              <span key={`dy-${i}`} className="px-2 py-0.5 rounded-sm text-xs border-2 border-gold/40 bg-gold/10 text-gold font-heading">
+              <span key={`dy-${i}`} className="rounded-sm border-2 border-accent-gold/45 bg-accent-gold/10 px-2 py-0.5 font-heading text-xs text-accent-gold">
                 大运·{s}
               </span>
             ))}
             {shensha.current?.liuNian?.map((s, i) => (
-              <span key={`ln-${i}`} className="px-2 py-0.5 rounded-sm text-xs border-2 border-jade/40 bg-jade/10 text-jade-light font-heading">
+              <span key={`ln-${i}`} className="rounded-sm border-2 border-accent-jade/45 bg-accent-jade/10 px-2 py-0.5 font-heading text-xs text-accent-jade">
                 流年·{s}
               </span>
             ))}
             {shensha.current?.liuYue?.map((s, i) => (
-              <span key={`ly-${i}`} className="px-2 py-0.5 rounded-sm text-xs border-2 border-[#7c5cbf]/40 bg-[#7c5cbf]/10 text-[#b69cf0] font-heading">
+              <span key={`ly-${i}`} className="rounded-sm border-2 border-accent-violet/45 bg-accent-violet/10 px-2 py-0.5 font-heading text-xs text-accent-violet">
                 流月·{s}
               </span>
             ))}
             {shensha.current?.liuRi?.map((s, i) => (
-              <span key={`lr-${i}`} className="px-2 py-0.5 rounded-sm text-xs border-2 border-water/40 bg-water/10 text-[#6b9bc3] font-heading">
+              <span key={`lr-${i}`} className="rounded-sm border-2 border-accent-azure/45 bg-accent-azure/10 px-2 py-0.5 font-heading text-xs text-accent-azure">
                 流日·{s}
               </span>
             ))}

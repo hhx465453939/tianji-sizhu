@@ -24,12 +24,12 @@ export default function LiuYuePanel({ liuYueArr, selectedMonth, onSelectMonth, t
 
   return (
     <div className="panel-traditional p-4">
-      <h3 className="text-xs text-gold/70 mb-3 font-heading tracking-wide-cn">
+      <h3 className="mb-3 font-heading text-xs tracking-wide-cn text-accent-gold">
         流月 · {targetYear}年
       </h3>
 
-      {/* 12-month grid */}
-      <div className="grid grid-cols-6 gap-2 mb-4">
+      {/* 12-month grid: 3 columns on phones, 6 on >=sm */}
+      <div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
         {liuYueArr.map((my) => {
           const isCurrent = isCurrentYear && my.month === currentMonth
           const isSelected = selectedMonth === my.month
@@ -37,18 +37,18 @@ export default function LiuYuePanel({ liuYueArr, selectedMonth, onSelectMonth, t
             <div
               key={my.month}
               onClick={() => onSelectMonth?.(my.month)}
-              className={`text-center p-2 rounded-sm border transition-colors cursor-pointer ${
+              className={`cursor-pointer rounded-sm border p-2 text-center transition-colors ${
                 isSelected
-                  ? 'border-gold/60 bg-gold/15 text-gold'
+                  ? 'border-accent-gold/60 bg-accent-gold/15 text-accent-gold'
                   : isCurrent
-                    ? 'border-jade/40 bg-jade/10 text-jade-light'
-                    : 'border-bronze/20 hover:bg-ink-700 hover:border-bronze/40'
+                    ? 'border-accent-jade/40 bg-accent-jade/10 text-accent-jade'
+                    : 'border-line-1 hover:border-accent-gold/35 hover:bg-surface-3/60'
               }`}
             >
-              <div className="text-sm font-bold font-ganzhi">{my.ganZhi}</div>
-              <div className="text-[10px] text-[var(--text-muted)] mt-0.5">{getNaYin(my.ganZhi)}</div>
-              <div className="text-[10px] text-[var(--text-muted)]">{MONTH_CN[my.month]}</div>
-              <div className="text-[10px] text-[var(--text-tertiary)]">{my.shiShen}</div>
+              <div className="font-ganzhi text-sm font-bold">{my.ganZhi}</div>
+              <div className="mt-0.5 text-[10px] text-fg-muted">{getNaYin(my.ganZhi)}</div>
+              <div className="text-[10px] text-fg-muted">{MONTH_CN[my.month]}</div>
+              <div className="text-[10px] text-fg-3">{my.shiShen}</div>
             </div>
           )
         })}
@@ -56,27 +56,27 @@ export default function LiuYuePanel({ liuYueArr, selectedMonth, onSelectMonth, t
 
       {/* Selected month detail */}
       {selectedData && (
-        <div className="border-t border-bronze/20 pt-3">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-[var(--text-muted)] text-xs">
+        <div className="border-t border-line-2 pt-3">
+          <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="text-xs text-fg-muted">
               {targetYear}年{MONTH_CN[selectedData.month]}
             </span>
-            <span className="text-lg font-bold font-ganzhi text-parchment-100">{selectedData.ganZhi}</span>
-            <span className="text-xs text-[var(--text-muted)]">{getNaYin(selectedData.ganZhi)}</span>
-            <span className="text-xs text-[var(--text-tertiary)]">{selectedData.shiShen}</span>
+            <span className="font-ganzhi text-lg font-bold text-fg-1">{selectedData.ganZhi}</span>
+            <span className="text-xs text-fg-muted">{getNaYin(selectedData.ganZhi)}</span>
+            <span className="text-xs text-fg-3">{selectedData.shiShen}</span>
           </div>
 
           {/* Month shensha */}
           {selectedData.liuYueShensha.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {selectedData.liuYueShensha.map((s, i) => (
-                <span key={i} className="px-2 py-0.5 rounded-sm text-xs border-2 border-jade/40 bg-jade/10 text-jade-light font-heading">
+                <span key={i} className="rounded-sm border-2 border-accent-jade/45 bg-accent-jade/10 px-2 py-0.5 font-heading text-xs text-accent-jade">
                   {s}
                 </span>
               ))}
             </div>
           ) : (
-            <span className="text-xs text-[var(--text-muted)]">本月无特殊神煞</span>
+            <span className="text-xs text-fg-muted">本月无特殊神煞</span>
           )}
         </div>
       )}
