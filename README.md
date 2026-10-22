@@ -8,17 +8,19 @@
 
 - **完整排盘**: 四柱、十神、五行、大运、流年、神煞
 - **数据可视化**: 五行雷达图、大运时间轴、关系连线图
-- **本地存储**: SQLite 嵌入式数据库，离线可用
+- **明暗双主题**: 明亮（宣纸晨光，默认）/ 暗色（玄墨夜观），偏好本地记忆
+- **本地存储**: 桌面 SQLite / 安卓 localStorage，离线可用
 - **AI Prompt 生成**: 一键生成结构化命理分析提示词
-- **轻量原生**: 基于 Wails，安装包 < 20MB
+- **多端支持**: Windows / macOS / Linux 桌面客户端 + Android APK
 
 ## 技术栈
 
 - **桌面框架**: Wails v2 (Go + WebView2)
+- **安卓框架**: Capacitor 8 (WebView 壳)
 - **前端**: React 18 + TypeScript + Vite + TailwindCSS
 - **排盘算法**: mystilight-8char
 - **可视化**: ECharts
-- **存储**: SQLite (modernc.org/sqlite)
+- **存储**: SQLite (modernc.org/sqlite) / localStorage
 
 ## 下载
 
@@ -30,6 +32,12 @@
 | macOS | `tianji-sizhu-darwin-universal.dmg` | Intel + Apple Silicon 通用 |
 | Linux | `tianji-sizhu-linux-amd64.AppImage` | 便携版，免安装 |
 | Linux | `tianji-sizhu-linux-amd64.tar.gz` | 压缩包 |
+| Android | `tianji-sizhu-<ver>-android-arm64-v8a.apk` | 主流手机（推荐） |
+| Android | `tianji-sizhu-<ver>-android-armeabi-v7a.apk` | 旧设备 |
+| Android | `tianji-sizhu-<ver>-android-x86_64.apk` | 模拟器 / x86 平板 |
+| Android | `tianji-sizhu-<ver>-android-universal.apk` | 通用包（不确定机型时选它） |
+
+> 安卓包使用项目内调试签名，侧载时需在系统设置中允许“未知来源”。
 
 ## 开发
 
@@ -47,6 +55,13 @@ wails build -platform windows/amd64
 build.cmd --installer                  # Windows (推荐，免执行策略)
 .\scripts\build.ps1 -Installer         # Windows PowerShell
 ./scripts/build.sh                     # macOS / Linux
+
+# 安卓 APK（全 ABI + universal，SDK 自动引导到项目内 .android/）
+./scripts/android-build.sh
+./scripts/android-build.sh arm64-v8a   # 只取单个 ABI
+
+# 环境隔离自检（确认工具链未外溢到主机全局）
+./scripts/env-check.sh
 ```
 
 ### 发布 Release
@@ -63,10 +78,15 @@ build.cmd --installer                  # Windows (推荐，免执行策略)
 ## 环境要求
 
 - Go 1.23+
-- Node.js 18+
-- pnpm
-- Wails CLI v2
+- Node.js 22+
+- pnpm（CI 可用 npm）
+- Wails CLI v2（桌面构建）
+- Java 21（安卓构建）
 - (可选) NSIS — 用于构建 Windows 安装程序
+
+> **安卓构建环境完全虚拟化**：SDK / Gradle 缓存 / AVD / 签名密钥全部落在项目内的 `.android/`，
+> 不写入任何主机全局路径。详见 `AGENTS.md` → 虚拟化与隔离部署治理。
+> 删除 `.android/` 即可完全卸载。
 
 ## 致谢
 

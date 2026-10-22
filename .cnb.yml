@@ -52,6 +52,16 @@ $:
             echo "=== Linux build output ==="
             ls -la build/bin/
 
+        - name: build android
+          script: |
+            apt-get update -qq && apt-get install -y -qq openjdk-17-jdk unzip zip > /dev/null 2>&1
+            export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+            export PATH="$JAVA_HOME/bin:$PATH"
+            cd frontend && npm install --no-audit --no-fund && cd ..
+            bash scripts/android-build.sh
+            echo "=== Android build output ==="
+            ls -la release/ || true
+
         - name: package artifacts
           script: |
             TAG="${CNB_BRANCH}"
@@ -69,6 +79,7 @@ $:
             if [ -f "build/bin/tianji-sizhu" ]; then
               tar czf "release/tianji-sizhu-${TAG}-linux-amd64.tar.gz" -C build/bin tianji-sizhu
             fi
+            # Android APKs are already written to release/ by scripts/android-build.sh
             echo "=== Release artifacts ==="
             ls -la release/
 
@@ -87,6 +98,12 @@ $:
               | Windows (安装程序) | *-installer.exe |
               | Windows (免安装) | *-windows-amd64.exe |
               | Linux | *-linux-amd64.tar.gz |
+              | Android (arm64-v8a) | *-android-arm64-v8a.apk |
+              | Android (armeabi-v7a) | *-android-armeabi-v7a.apk |
+              | Android (x86_64) | *-android-x86_64.apk |
+              | Android (通用) | *-android-universal.apk |
+
+              > 安卓安装包使用项目内调试签名，侧载时需允许“未知来源”。
 
         - name: upload attachments
           image: cnbcool/attachments:latest

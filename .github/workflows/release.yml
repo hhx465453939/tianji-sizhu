@@ -178,8 +178,88 @@ jobs:
           path: |
             build/bin/${{ env.APP_NAME }}-linux-amd64.tar.gz
 
+  build-android:
+    runs-on: ubuntu-latest
+    env:
+      TIANJI_ROOT: ${{ github.workspace }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-36 build-tools;36.0.0 platform-tools'
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build web bundle
+        working-directory: frontend
+        run: pnpm build
+
+      - name: Sync Capacitor
+        working-directory: frontend
+        run: npx cap sync android
+
+      - name: Project-local debug keystore
+        run: |
+          mkdir -p "$TIANJI_ROOT/.android/home"
+          keytool -genkeypair -v \
+            -keystore "$TIANJI_ROOT/.android/home/debug.keystore" \
+            -storepass android -keypass android \
+            -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Assemble release APKs
+        working-directory: frontend/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --max-workers=2
+          ls -la app/build/outputs/apk/release/
+
+      - name: Name artifacts
+        run: |
+          VERSION=$(node -p "require('./frontend/package.json').version")
+          mkdir -p release-assets
+          for apk in frontend/android/app/build/outputs/apk/release/*.apk; do
+            base=$(basename "$apk")
+            abi=$(echo "$base" | sed -E 's/^app-(.*)-release\.apk$/\1/')
+            cp "$apk" "release-assets/tianji-sizhu-${VERSION}-android-${abi}.apk"
+          done
+          ls -la release-assets/
+
+      - name: Verify APK metadata
+        run: |
+          AAPT="$ANDROID_HOME/build-tools/36.0.0/aapt2"
+          "$AAPT" dump badging release-assets/*universal*.apk | grep -E "^package:|^sdkVersion|^targetSdkVersion"
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apks
+          path: release-assets/*.apk
+
   publish-release:
-    needs: [build-windows, build-macos, build-linux]
+    needs: [build-windows, build-macos, build-linux, build-android]
     if: always() && !cancelled()
     runs-on: ubuntu-latest
     steps:
@@ -216,6 +296,12 @@ jobs:
             echo "| Windows | *.exe |"
             echo "| macOS | *.dmg |"
             echo "| Linux | *.tar.gz |"
+            echo "| Android (arm64-v8a) | *-android-arm64-v8a.apk |"
+            echo "| Android (armeabi-v7a) | *-android-armeabi-v7a.apk |"
+            echo "| Android (x86_64) | *-android-x86_64.apk |"
+            echo "| Android (universal) | *-android-universal.apk |"
+            echo ""
+            echo "> Android APKs are signed with the project debug key unless a release keystore is configured. Install via \"unknown sources\"."
             echo ""
             echo "### Commits"
             echo "$CHANGES"
@@ -233,5 +319,6 @@ jobs:
             release-assets/**/*.exe
             release-assets/**/*.dmg
             release-assets/**/*.tar.gz
+            release-assets/**/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

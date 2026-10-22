@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Song-dynasty palette shared with frontend/src/style.css -->
+    <color name="colorPrimary">#B23A28</color>
+    <color name="colorPrimaryDark">#8F2E20</color>
+    <color name="colorAccent">#A8822C</color>
+
+    <color name="tianji_paper">#F5F0E6</color>
+    <color name="tianji_seal">#B23A28</color>
+    <color name="tianji_ink">#241E17</color>
+</resources>
