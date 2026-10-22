@@ -1,5 +1,10 @@
 # ── Build artifacts ─────────────────────────
 /build/
+*.apk
+*.aab
+*.jks
+*.keystore
+release/
 *.exe
 *.exe~
 *.dll
@@ -35,6 +40,33 @@ Thumbs.db
 
 # ── Database ───────────────────────────────
 *.db
+
+# ── Virtualized toolchain (MUST stay inside project, never commit) ──
+# See AGENTS.md → 虚拟化与隔离部署治理
+/.android/
+/.virtual/
+/.venv/
+/.toolchain/
+/.cache/
+/.tmp/
+
+# ── Android build outputs (source in android/ IS committed) ──
+/android/.gradle/
+/android/local.properties
+/android/build/
+/android/app/build/
+/android/app/release/
+/android/capacitor-cordova-android-plugins/
+/frontend/android/.gradle/
+/frontend/android/local.properties
+/frontend/android/build/
+/frontend/android/app/build/
+/frontend/android/app/release/
+/frontend/android/capacitor-cordova-android-plugins/
+
+# ── Stray artifacts (pending manual removal) ──
+# Produced once by a mis-rooted asset script; safe to delete: rm -rf frontend/frontend
+/frontend/frontend/
 
 # ── Temp ───────────────────────────────────
 /tmp/
