@@ -30,6 +30,9 @@ TARGETS=(
   "$RELEASE_ROOT/.tmp/spike"
   "$RELEASE_ROOT/.tmp/nsis-extract"
   "$RELEASE_ROOT/tianji-sizhu-res.syso"
+  # Stray output from a mis-rooted asset script (CHG-004 TRACEABILITY D3).
+  # Harmless to git (ignored) but confusing on disk; keep it cleanable.
+  "$RELEASE_ROOT/frontend/frontend"
 )
 
 if [ "$ALL" = "1" ]; then
