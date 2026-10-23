@@ -52,6 +52,10 @@
 | Python 虚拟环境 | `<root>/.venv` | `VIRTUAL_ENV`、`PYTHONUSERBASE` |
 | Node 依赖 | `<root>/frontend/node_modules` | pnpm 默认，禁用全局安装 |
 | pnpm / npm 缓存 | `<root>/.cache/pnpm` | `PNPM_HOME`、`npm_config_cache` |
+| Go 构建缓存 | `<root>/.cache/go-build` | `GOCACHE` |
+| Go 模块缓存 | `<root>/.cache/go-mod` | `GOMODCACHE` |
+| Go 工具二进制（wails 等） | `<root>/.toolchain/bin` | `GOBIN` |
+| NSIS（makensis） | `<root>/.toolchain/nsis` | 加入 `PATH` |
 | 通用 XDG 缓存 | `<root>/.cache` | `XDG_CACHE_HOME`、`XDG_CONFIG_HOME`、`XDG_DATA_HOME` |
 | 临时构建物 | `<root>/.tmp` | `TMPDIR`、`TEMP`、`TMP` |
 | 本地虚拟运行环境（WSL/容器卷/虚拟机盘） | `<root>/.virtual` | 由脚本显式挂载 |
@@ -63,10 +67,12 @@
 
 - ✅ `JAVA_HOME` 指向宿主机已装 JDK（如 `C:\Program Files\Eclipse Adoptium\jdk-21...`）
 - ✅ 用系统 `python3` 在项目内创建 venv
-- ✅ 复用 Go 的模块/构建缓存（`GOMODCACHE`、`GOCACHE`）：内容是内容寻址的只读缓存，
-  不含项目状态，多项目共享是 Go 的设计意图；删掉不损失任何项目信息
 - ❌ 不得用本项目脚本去安装/升级这些运行时（那属于主机维护，不属项目）
 - ❌ 不得让它们把**项目专属**产物写到项目外（如 `~/.m2`、`~/.gradle`、AVD、签名密钥）
+
+> Go 缓存（`GOCACHE` / `GOMODCACHE` / `GOBIN`）**不属于**可复用项：
+> 必须 `source scripts/go-env.sh` 重定向进 `.cache/go-build`、`.cache/go-mod`、`.toolchain/bin`；
+> 未 source 时 `env-check.sh` 会按 `go env` 实际值判 `OUTSIDE PROJECT` 并失败。
 
 > 判定口径：`scripts/env-check.sh` 对项目专属 SDK/缓存判 `OUTSIDE PROJECT` = 失败；
 > 对机器级运行时打印 `host runtime (allowed)`，不计入失败。
