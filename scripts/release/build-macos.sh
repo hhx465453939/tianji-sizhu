@@ -88,9 +88,11 @@ TXT
 
 DMG="$OUT/tianji-sizhu-$VERSION-macos-$ARCH.dmg"
 rm -f "$DMG"
-hdiutil create -volname "天机四柱 $VERSION ($ARCH)" \
-  -srcfolder "$STAGE" -fs HFS+ -format UDZO -ov "$DMG" >/dev/null \
-  || die "hdiutil create failed" 3
+# -fs HFS+ is deprecated on macOS 14+ and hung for 25+ minutes on CI.
+# Use the system default filesystem (APFS) and enforce a hard timeout.
+run_timeout 420 hdiutil create -volname "TianJi-SiZhu $VERSION $ARCH" \
+  -srcfolder "$STAGE" -format UDZO -ov "$DMG" >/dev/null 2>&1 \
+  || die "hdiutil create failed or timed out" 3
 
 ok "dmg: $(basename "$DMG")  $(file_bytes "$DMG") bytes"
 log "done ($ARCH) -> $OUT"

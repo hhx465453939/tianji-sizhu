@@ -85,6 +85,26 @@ sha256_of() {
   fi
 }
 
+# run_timeout <seconds> <cmd...> ; returns 124 on timeout.
+# macOS has no timeout(1), and a hung hdiutil previously stalled CI for 30+ min.
+run_timeout() {
+  local secs="$1"; shift
+  "$@" &
+  local pid=$! waited=0
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep 2
+    waited=$((waited + 2))
+    if [ "$waited" -ge "$secs" ]; then
+      kill -TERM "$pid" 2>/dev/null || true
+      sleep 2
+      kill -KILL "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+      return 124
+    fi
+  done
+  wait "$pid"
+}
+
 # macho_arch <go-arch> -> Apple/Mach-O slice name (Go says amd64, Apple says x86_64)
 macho_arch() {
   case "$1" in

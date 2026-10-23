@@ -100,6 +100,8 @@ else
 TXT
 
   # ditto (not zip) keeps the code signature and internal symlinks intact.
-  ( cd "$STAGE" && ditto -c -k --keepParent tianji-sizhu.app "$OUT/$ZIP_NAME" )
+  # Absolute path: --keepParent still stores `tianji-sizhu.app` as the top dir.
+  run_timeout 420 ditto -c -k --keepParent "$STAGE/tianji-sizhu.app" "$OUT/$ZIP_NAME" \
+    || die "ditto failed or timed out" 3
   ok "portable: $ZIP_NAME  $(file_bytes "$OUT/$ZIP_NAME") bytes"
 fi
