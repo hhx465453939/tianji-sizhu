@@ -189,17 +189,21 @@ bash scripts/release/clean.sh --dry-run
 |---|------|------|------|--------|
 | 1 | Windows | amd64 | 安装包（NSIS） | `tianji-sizhu-<ver>-windows-amd64-setup.exe` |
 | 2 | Windows | arm64 | 安装包（NSIS） | `tianji-sizhu-<ver>-windows-arm64-setup.exe` |
-| 3 | Windows | amd64 | 免安装 ZIP | `tianji-sizhu-<ver>-windows-amd64-portable.zip` |
-| 4 | Windows | arm64 | 免安装 ZIP | `tianji-sizhu-<ver>-windows-arm64-portable.zip` |
-| 5 | macOS | amd64 | 签名 app 包 | `tianji-sizhu-<ver>-macos-amd64-app.zip` |
-| 6 | macOS | arm64 | 签名 app 包 | `tianji-sizhu-<ver>-macos-arm64-app.zip` |
-| 7 | — | — | 校验清单 | `SHA256SUMS-<ver>.txt` |
+| 3 | macOS | amd64 | 安装包（pkg） | `tianji-sizhu-<ver>-macos-amd64-installer.pkg` |
+| 4 | macOS | arm64 | 安装包（pkg） | `tianji-sizhu-<ver>-macos-arm64-installer.pkg` |
+| 5 | Windows | amd64 | 免安装 ZIP | `tianji-sizhu-<ver>-windows-amd64-portable.zip` |
+| 6 | Windows | arm64 | 免安装 ZIP | `tianji-sizhu-<ver>-windows-arm64-portable.zip` |
+| 7 | macOS | amd64 | 免安装 ZIP | `tianji-sizhu-<ver>-macos-amd64-app.zip` |
+| 8 | macOS | arm64 | 免安装 ZIP | `tianji-sizhu-<ver>-macos-arm64-app.zip` |
+| 9 | — | — | 校验清单 | `SHA256SUMS-<ver>.txt` |
 
-- **6 个产物 + 1 个清单**，缺一不发
-- macOS 交付 `.app.zip`（`ditto` 保留 ad-hoc 签名与符号链接）；**不使用 DMG**：
+- **4 安装包 + 4 免安装 + 1 校验清单**，缺一不发
+- 每个平台两个架构：Windows `amd64`/`arm64`，macOS `amd64`/`arm64`（不交 universal 假包）
+- macOS 安装包用 `pkgbuild` 产 `.pkg`；**禁用 DMG**：
   `hdiutil` 在 macOS 14 CI runner 上会挂死在内核态（SIGKILL 无效，实测卡死 25 分钟以上）
+- macOS 免安装交付 `.app.zip`（`ditto` 保留 ad-hoc 签名与符号链接）
 - 缺某个架构就**如实缺**并在 Release Notes 声明，严禁用 x64 包冒充 arm64
-- 无 `SHA256SUMS` 不得发布
+- 无 `SHA256SUMS` 不得发布；清单必须覆盖全部 8 个产物
 
 ### 2. 版本单一源
 
@@ -226,8 +230,9 @@ bash scripts/release/clean.sh --dry-run
 
 1. **NSIS 静默降级是陷阱**：`makensis` 缺失时 Wails 打印 warn 后返回成功（不产安装包）。构建脚本必须在 `wails build` 之后断言 `*-<arch>-installer.exe` 存在，缺失 `exit 3`。
 2. **macOS 签名**：必须保留 Wails 的 ad-hoc 签名，并额外断言 `codesign --verify --deep --strict` 通过；`spctl` 失败属已知情形，需写入证据而非当作构建失败。
-3. **macOS 交付 `.app.zip`**：`ditto -c -k --keepParent`，保留 ad-hoc 签名与符号链接；
-   `hdiutil`/DMG **禁用**（macOS 14 CI 上挂死在内核态）。安装引导写在 Release Notes。
+3. **macOS 安装包用 `.pkg`**：`pkgbuild --root <stage> --install-location /Applications --identifier com.tianjisizhu.desktop --version <ver>`；
+   免安装用 `ditto -c -k --keepParent` 打包 `.app`（保留 ad-hoc 签名与符号链接）。
+   `hdiutil`/DMG **禁用**（macOS 14 CI 上挂死在内核态）。
 4. **免安装版**：Windows 用 zip；macOS **必须** `ditto -c -k --keepParent --sequesterRsrc`，禁止 `zip` CLI（会破坏 bundle 签名与符号链接）。
 5. **打包资源入库**：`build/appicon.png`、`build/windows/info.json`、`build/windows/installer/project.nsi`、`build/darwin/Info.plist`。`build/bin/`、`build/windows/installer/wails_tools.nsh`、`build/windows/installer/tmp/` 不入库。`.gitignore` 只忽略 `/build/bin/`，不再整体忽略 `build/`。
 6. **视觉是变量**：图标图形、配色、显示名文案可随品牌演进替换，此类变更**不触发**打包/签名/生命周期用例重跑；只有尺寸、格式、路径、签名对象变化才需重跑 L2–L4。
@@ -322,6 +327,7 @@ git push origin main --tags
 
 ### → GitHub Actions 自动构建 + 发布 Releases
 
-产出固定为 **8 个桌面产物 + SHA256SUMS**（Windows x64/arm64 安装包 + macOS x64/arm64 DMG + 四个免安装 ZIP），
-外加 Android 全架构 APK（CHG-002）。Linux 桌面端已从流水线移除（legacy，且反复在 runner 上挂死）。
+产出固定为 **8 个桌面产物 + SHA256SUMS**：Windows x64/arm64 安装包（NSIS）+ macOS x64/arm64 安装包（pkg）
++ 四个免安装 ZIP（win portable ×2、mac app.zip ×2），
+外加 Android 全架构 APK（arm64-v8a / armeabi-v7a / x86_64 / x86 / universal）。Linux 桌面端已从流水线移除（legacy，且反复在 runner 上挂死）。
 发布前必须确认：`publish` 未使用 `if: always()`，且任一架构失败时 Release **未创建**。

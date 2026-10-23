@@ -99,7 +99,7 @@ case "$MODE" in
     die "host '$HOST_OS' cannot produce native packages (use CI)" 2 ;;
 esac
 
-# 5. portable archives (Windows only; macOS ships a signed .app zip)
+# 5. portable archives (Windows only; macOS .app zip is emitted by build-macos.sh)
 if [ "$MODE" = "windows" ]; then
   for arch in amd64 arm64; do
     bash "$RELEASE_ROOT/scripts/release/package-portable.sh" --os windows --arch "$arch" || exit $?
@@ -122,7 +122,7 @@ if [ "$SKIP_SMOKE" != "1" ]; then
       -ExpectVersion "$VERSION" -ExpectArch amd64 || true
   else
     bash "$RELEASE_ROOT/scripts/release/smoke-macos.sh" \
-      --dmg "$OUT/tianji-sizhu-$VERSION-macos-arm64.dmg" \
+      --pkg "$OUT/tianji-sizhu-$VERSION-macos-arm64-installer.pkg" \
       --expect-arch arm64 --expect-version "$VERSION" || true
   fi
 fi

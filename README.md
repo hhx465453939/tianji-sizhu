@@ -26,18 +26,23 @@
 
 前往 [Releases](https://github.com/hhx465453939/tianji-sizhu/releases) 页面下载对应平台的安装包：
 
-| 平台 | 文件 | 说明 |
-|------|------|------|
-| Windows | `tianji-sizhu-amd64-installer.exe` | NSIS 安装程序 |
-| macOS | `tianji-sizhu-darwin-universal.dmg` | Intel + Apple Silicon 通用 |
-| Linux | `tianji-sizhu-linux-amd64.AppImage` | 便携版，免安装 |
-| Linux | `tianji-sizhu-linux-amd64.tar.gz` | 压缩包 |
-| Android | `tianji-sizhu-<ver>-android-arm64-v8a.apk` | 主流手机（推荐） |
-| Android | `tianji-sizhu-<ver>-android-armeabi-v7a.apk` | 旧设备 |
-| Android | `tianji-sizhu-<ver>-android-x86_64.apk` | 模拟器 / x86 平板 |
-| Android | `tianji-sizhu-<ver>-android-universal.apk` | 通用包（不确定机型时选它） |
+| 平台 | 架构 | 安装包 | 免安装 |
+|------|------|--------|--------|
+| Windows | x64 | `tianji-sizhu-<ver>-windows-amd64-setup.exe` | `tianji-sizhu-<ver>-windows-amd64-portable.zip` |
+| Windows | arm64 | `tianji-sizhu-<ver>-windows-arm64-setup.exe` | `tianji-sizhu-<ver>-windows-arm64-portable.zip` |
+| macOS | Intel (x64) | `tianji-sizhu-<ver>-macos-amd64-installer.pkg` | `tianji-sizhu-<ver>-macos-amd64-app.zip` |
+| macOS | Apple Silicon (arm64) | `tianji-sizhu-<ver>-macos-arm64-installer.pkg` | `tianji-sizhu-<ver>-macos-arm64-app.zip` |
+| Android | arm64-v8a | `tianji-sizhu-<ver>-android-arm64-v8a.apk`（主流手机） | — |
+| Android | armeabi-v7a | `tianji-sizhu-<ver>-android-armeabi-v7a.apk`（旧设备） | — |
+| Android | x86_64 | `tianji-sizhu-<ver>-android-x86_64.apk`（模拟器） | — |
+| Android | x86 | `tianji-sizhu-<ver>-android-x86.apk`（32 位 x86 模拟器） | — |
+| Android | universal | `tianji-sizhu-<ver>-android-universal.apk`（不确定机型选它） | — |
 
-> 安卓包使用项目内调试签名，侧载时需在系统设置中允许“未知来源”。
+每个产物都可用 `SHA256SUMS-<ver>.txt` 校验，架构与版本断言记录在 `artifacts-manifest.json`。
+
+> **Windows**：安装包未做代码签名，SmartScreen 可能拦截 →「更多信息」→「仍要运行」。
+> **macOS**：ad-hoc 签名，首次打开请右键 →「打开」；或 `xattr -dr com.apple.quarantine /Applications/tianji-sizhu.app`。请勿全局关闭 Gatekeeper。
+> **Android**：调试签名，侧载需允许「未知来源」。
 
 ## 开发
 

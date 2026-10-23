@@ -213,3 +213,66 @@ RESULT: PASS
 - macOS 架构切片：`skip:needs-darwin`
 
 深度断言由各构建 job 在原生宿主完成（`build-windows.sh` 的 PE 断言、`build-macos.sh` 的 `lipo` + `codesign`），日志可查。
+
+---
+
+## 5. v1.2.0 资产补齐（2026-10-23）
+
+### 5.1 事实核验
+
+`gh release view v1.2.0` 显示 12 个资产，其中桌面端为：
+
+| 平台 | 架构 | 安装包 | 免安装 |
+|------|------|--------|--------|
+| Windows | amd64 | `windows-amd64-setup.exe` ✅ | `windows-amd64-portable.zip` ✅ |
+| Windows | arm64 | `windows-arm64-setup.exe` ✅ | `windows-arm64-portable.zip` ✅ |
+| macOS | amd64 | ❌ **缺失** | `macos-amd64-app.zip` ✅ |
+| macOS | arm64 | ❌ **缺失** | `macos-arm64-app.zip` ✅ |
+
+结论：x64 并未缺失（用户初判有误），**真实缺口是 macOS 安装包**。
+
+### 5.2 根因
+
+`a79a3b3`：`hdiutil` 在 macOS 14 CI runner 上进入不可中断内核态，25 分钟以上不返回，SIGKILL 无效，420s `run_timeout` 也无法回收。DMG 因此被砍，只留 `.app.zip`。
+
+→ 不是配置错误，是 `hdiutil` 在该环境的硬故障。**不能靠"再试一次 DMG"修复。**
+
+### 5.3 决策：DPKG（pkgbuild）替代 DMG
+
+`pkgbuild` 是纯文件打包器，不创建/挂载磁盘镜像，不进入内核态 → 结构上不可能复现 hang。
+
+| 变更 | 文件 | 断言 |
+|------|------|------|
+| 产 `.pkg` | `scripts/release/build-macos.sh` | `[ -s "$PKG_OUT" ]` + `run_timeout 420` |
+| 矩阵 6 → 8 | `scripts/release/verify-artifacts.sh` | 4 安装包 + 4 免安装 |
+| 校验清单覆盖 app.zip | `scripts/release/checksums.sh` | 原 bug：只收 `*.dmg`，macOS 产物从未进 SHA256SUMS |
+| L4 支持 pkg | `scripts/release/smoke-macos.sh` | `pkgutil --expand-full` 后 lipo/codesign 校验 |
+| CI 收 pkg + tag 修正 | `.github/workflows/release.yml` | `tag_name` 显式绑定，避免 dispatch 建到 `main` |
+
+### 5.4 本机 x64 实测证据（Windows 10 x64 / 非管理员）
+
+```bash
+# 1) 下载 v1.2.0 的 Windows x64 资产
+gh release download v1.2.0 -p "tianji-sizhu-1.2.0-windows-amd64-setup.exe" \
+  -p "tianji-sizhu-1.2.0-windows-amd64-portable.zip"
+
+# 2) 安装包生命周期（per-machine 需提权，未提权时诚实 SKIP）
+powershell -File scripts/release/smoke-windows.ps1 \
+  -Installer .tmp/verify/tianji-sizhu-1.2.0-windows-amd64-setup.exe \
+  -ExpectVersion 1.2.0 -ExpectArch amd64
+# → SKIP: not elevated; per-machine NSIS install requires admin (record as not-executed)
+
+# 3) 免安装版：解压 + 启动 5s + data 目录
+# → PE32+ executable for MS Windows (GUI), x86-64
+# → alive pid=52656
+# → data dir created OK  (ADR-003 便携分支生效)
+# → PASS
+```
+
+判读：x64 二进制在本机可运行（WebView2 与依赖齐备）；安装包流程需 UAC，未提权时如实 `not-executed`，不伪造 PASS。
+
+### 5.5 待补
+
+- [ ] CI 重建后，v1.2.0 出现 `macos-{amd64,arm64}-installer.pkg`
+- [ ] `SHA256SUMS-1.2.0.txt` 条目数 = 8
+- [ ] 提权后补跑 Windows x64 安装包 L3（需人工点一次 UAC）

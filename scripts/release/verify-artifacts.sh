@@ -51,11 +51,12 @@ emit() {
   # --- size gate (SPEC §6) ---
   local limit=30000000
   case "$kind" in
-    setup)    limit=28000000 ;;
-    portable) limit=22000000 ;;
-    appzip)   limit=30000000 ;;
-    dmg)      limit=30000000 ;;
-    app)      limit=30000000 ;;
+    setup)     limit=28000000 ;;
+    portable)  limit=22000000 ;;
+    installer) limit=30000000 ;;
+    appzip)    limit=30000000 ;;
+    dmg)       limit=30000000 ;;
+    app)       limit=30000000 ;;
   esac
 
   if [ "$bytes" -le 0 ] || [ "$bytes" -gt "$limit" ]; then
@@ -79,6 +80,10 @@ emit() {
   elif [ "$os" = "windows" ] && [ "$kind" = "setup" ]; then
     # NSIS stub is always 32-bit; assert the arch token in the name instead.
     case "$file" in *"-$arch-setup.exe") archcheck="name:$arch" ;; *) archcheck="name:MISMATCH"; FAIL=1 ;; esac
+  elif [ "$os" = "macos" ] && [ "$kind" = "installer" ]; then
+    # .pkg is a xar archive; the Mach-O lives inside the payload. Archive the
+    # name token here and let build-macos.sh / L4 own the real slice assertion.
+    case "$file" in *"-$arch-installer.pkg") archcheck="name:$arch" ;; *) archcheck="name:MISMATCH"; FAIL=1 ;; esac
   elif [ "$os" = "macos" ]; then
     if [ "$HOST_OS" = "Darwin" ]; then
       local slice
@@ -112,13 +117,15 @@ emit() {
   ok "$file  $bytes bytes  arch=$archcheck version=$versioncheck"
 }
 
-# --- expected matrix ----------------------------------------------------
+# --- expected matrix: 8 desktop artifacts ---------------------------------
 emit "tianji-sizhu-$VERSION-windows-amd64-setup.exe"     windows amd64 setup
 emit "tianji-sizhu-$VERSION-windows-arm64-setup.exe"     windows arm64 setup
 emit "tianji-sizhu-$VERSION-windows-amd64-portable.zip"  windows amd64 portable
 emit "tianji-sizhu-$VERSION-windows-arm64-portable.zip"  windows arm64 portable
-# macOS ships a signed .app zip: hdiutil is unusable on CI runners (hangs in
-# kernel state), and ditto preserves the ad-hoc signature and symlinks.
+# macOS installer is .pkg: hdiutil hangs in kernel state on CI runners, so DMG
+# is not an option. The portable form is a ditto-packed .app zip (signature safe).
+emit "tianji-sizhu-$VERSION-macos-amd64-installer.pkg"   macos   amd64 installer
+emit "tianji-sizhu-$VERSION-macos-arm64-installer.pkg"   macos   arm64 installer
 emit "tianji-sizhu-$VERSION-macos-amd64-app.zip"         macos   amd64 appzip
 emit "tianji-sizhu-$VERSION-macos-arm64-app.zip"         macos   arm64 appzip
 

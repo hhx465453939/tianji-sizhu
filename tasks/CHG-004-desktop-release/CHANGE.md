@@ -40,12 +40,12 @@
 |---|------|------|------|--------|
 | 1 | Windows | amd64 | 安装包（NSIS） | `tianji-sizhu-<ver>-windows-amd64-setup.exe` |
 | 2 | Windows | arm64 | 安装包（NSIS） | `tianji-sizhu-<ver>-windows-arm64-setup.exe` |
-| 3 | macOS | amd64 | 安装包（DMG） | `tianji-sizhu-<ver>-macos-amd64.dmg` |
-| 4 | macOS | arm64 | 安装包（DMG） | `tianji-sizhu-<ver>-macos-arm64.dmg` |
+| 3 | macOS | amd64 | 安装包（pkg） | `tianji-sizhu-<ver>-macos-amd64-installer.pkg` |
+| 4 | macOS | arm64 | 安装包（pkg） | `tianji-sizhu-<ver>-macos-arm64-installer.pkg` |
 | 5 | Windows | amd64 | 免安装 ZIP | `tianji-sizhu-<ver>-windows-amd64-portable.zip` |
 | 6 | Windows | arm64 | 免安装 ZIP | `tianji-sizhu-<ver>-windows-arm64-portable.zip` |
-| 7 | macOS | amd64 | 免安装 ZIP | `tianji-sizhu-<ver>-macos-amd64-portable.zip` |
-| 8 | macOS | arm64 | 免安装 ZIP | `tianji-sizhu-<ver>-macos-arm64-portable.zip` |
+| 7 | macOS | amd64 | 免安装 ZIP | `tianji-sizhu-<ver>-macos-amd64-app.zip` |
+| 8 | macOS | arm64 | 免安装 ZIP | `tianji-sizhu-<ver>-macos-arm64-app.zip` |
 | 9 | — | — | 校验清单 | `SHA256SUMS-<ver>.txt` |
 
 **工程目标**

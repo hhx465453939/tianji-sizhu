@@ -23,9 +23,9 @@ SUMS="$DIST/SHA256SUMS-$VERSION.txt"
 : > "$SUMS"
 
 COUNT=0
-# Only the 8 deliverables (SPEC §3.1): setups, portables and dmgs.
-# Intermediate app binaries (tianji-sizhu-<ver>-windows-<arch>.exe) are excluded.
-for f in "$DIST"/*-setup.exe "$DIST"/*-portable.zip "$DIST"/*.dmg; do
+# Only the 8 deliverables (SPEC §3.1): win setups, win portables, mac .pkg
+# installers and mac .app zips. Intermediate bare binaries are excluded.
+for f in "$DIST"/*-setup.exe "$DIST"/*-portable.zip "$DIST"/*-installer.pkg "$DIST"/*-app.zip; do
   [ -e "$f" ] || continue
   case "$(basename "$f")" in SHA256SUMS-*) continue ;; esac
   printf '%s  %s\n' "$(sha256_of "$f")" "$(basename "$f")" >> "$SUMS"

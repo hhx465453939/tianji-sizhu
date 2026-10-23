@@ -1,40 +1,55 @@
 #!/usr/bin/env bash
-# macOS app-zip lifecycle smoke test (CHG-004 ADR-008 L4).
+# macOS lifecycle smoke test (CHG-004 ADR-008 L4) for both delivery shapes.
 #
 #   smoke-macos.sh --zip <path> --expect-arch <amd64|arm64> [--expect-version <ver>]
+#   smoke-macos.sh --pkg <path> --expect-arch <amd64|arm64> [--expect-version <ver>]
 #
-# Extracts with ditto (preserves the ad-hoc signature and symlinks), then
-# verifies arch, signature and version, launches the app for 5s, and proves no
-# residue. DMG/hdiutil is intentionally not used: it hangs on CI runners.
+# --zip : ditto -x (preserves signature/symlinks)
+# --pkg : pkgutil --expand-full (never mounts a disk image; hdiutil hangs in CI)
+# Both paths then verify arch, signature and version, launch for 5s, prove no
+# residue. DMG is intentionally unsupported.
 set -euo pipefail
 
 source "$(dirname "$0")/lib.sh"
 
 ZIP=""
+PKG=""
 ARCH=""
 VER=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --zip) ZIP="${2:-}"; shift 2 ;;
-    --dmg) ZIP="${2:-}"; shift 2 ;;   # backward-compatible alias
+    --pkg) PKG="${2:-}"; shift 2 ;;
+    --dmg) die "--dmg is no longer supported (hdiutil hangs on CI); use --pkg" 2 ;;
     --expect-arch) ARCH="${2:-}"; shift 2 ;;
     --expect-version) VER="${2:-}"; shift 2 ;;
-    -h|--help) echo "usage: smoke-macos.sh --zip <path> --expect-arch <amd64|arm64> [--expect-version <ver>]"; exit 0 ;;
+    -h|--help) echo "usage: smoke-macos.sh (--zip|--pkg) <path> --expect-arch <amd64|arm64> [--expect-version <ver>]"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
 
 host_guard macos
-[ -f "$ZIP" ] || die "zip not found: $ZIP" 2
+[ -n "$ZIP" ] || [ -n "$PKG" ] || die "one of --zip or --pkg is required" 2
 [ "$ARCH" = "amd64" ] || [ "$ARCH" = "arm64" ] || die "--expect-arch required" 2
 
 WORK="$RELEASE_ROOT/.tmp/unzip-$ARCH"
 rm -rf "$WORK"; mkdir -p "$WORK"
 trap 'rm -rf "$WORK"' EXIT
 
-run_timeout 300 ditto -x -k "$ZIP" "$WORK" || die "unzip failed" 1
-APP="$WORK/tianji-sizhu.app"
-[ -d "$APP" ] || die "app bundle missing inside zip" 1
+if [ -n "$PKG" ]; then
+  [ -f "$PKG" ] || die "pkg not found: $PKG" 2
+  # Signature state is informational: no Developer ID cert exists yet.
+  warn "pkg signature: $(run_timeout 30 pkgutil --check-signature "$PKG" 2>&1 | tr '\n' ' ' || true)"
+  run_timeout 300 pkgutil --expand-full "$PKG" "$WORK/pkg" || die "pkg expand failed" 1
+  APP="$WORK/pkg/tianji-sizhu.pkg/Payload/tianji-sizhu.app"
+  [ -d "$APP" ] || die "app bundle missing inside pkg payload (found: $(ls "$WORK/pkg" 2>/dev/null | tr '\n' ' '))" 1
+  ok "pkg payload expanded"
+else
+  [ -f "$ZIP" ] || die "zip not found: $ZIP" 2
+  run_timeout 300 ditto -x -k "$ZIP" "$WORK" || die "unzip failed" 1
+  APP="$WORK/tianji-sizhu.app"
+  [ -d "$APP" ] || die "app bundle missing inside zip" 1
+fi
 
 MACHO_ARCH="$(macho_arch "$ARCH")"
 SLICES="$(lipo -archs "$APP/Contents/MacOS/tianji-sizhu")"

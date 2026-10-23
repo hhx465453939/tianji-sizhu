@@ -178,7 +178,16 @@ jobs:
           set -euo pipefail
           bash scripts/release/build-macos.sh --arch "${{ matrix.arch }}" --skip-frontend
 
-      - name: L4 extract/launch lifecycle
+      - name: L4 pkg expand/launch lifecycle
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          V="$(tr -d '[:space:]' < VERSION)"
+          bash scripts/release/smoke-macos.sh \
+            --pkg ".tmp/release/$V/tianji-sizhu-$V-macos-${{ matrix.arch }}-installer.pkg" \
+            --expect-arch "${{ matrix.arch }}" --expect-version "$V"
+
+      - name: L4 zip extract/launch lifecycle
         continue-on-error: true
         timeout-minutes: 5
         run: |
@@ -190,7 +199,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: release-macos-${{ matrix.arch }}
-          path: .tmp/release/*/*.zip
+          path: |
+            .tmp/release/*/*.zip
+            .tmp/release/*/*.pkg
           if-no-files-found: error
 
   # ------------------------------------------------------------- android (kept)
@@ -259,7 +270,7 @@ jobs:
           # to avoid .tmp/release/<ver>/<ver>/<file>.
           path: .tmp/release
 
-      - name: Verify artifacts and emit manifest (strict, all 6 required)
+      - name: Verify artifacts and emit manifest (strict, all 8 required)
         run: |
           set -euo pipefail
           bash scripts/release/verify-artifacts.sh
@@ -297,6 +308,7 @@ jobs:
           # Deliverable shapes only; intermediate binaries (bare .exe) are excluded.
           find release-assets -type f \( \
             -name '*-setup.exe' -o -name '*-portable.zip' -o -name '*-app.zip' \
+            -o -name '*-installer.pkg' \
             -o -name '*.apk' -o -name '*-legacy.tar.gz' \
             -o -name 'SHA256SUMS-*.txt' -o -name 'artifacts-manifest.json' \
           \) -exec cp {} out/ \;
@@ -325,11 +337,14 @@ jobs:
             echo "| Windows | arm64 | 安装包 | \`tianji-sizhu-$V-windows-arm64-setup.exe\` |"
             echo "| Windows | amd64 | 免安装 | \`tianji-sizhu-$V-windows-amd64-portable.zip\` |"
             echo "| Windows | arm64 | 免安装 | \`tianji-sizhu-$V-windows-arm64-portable.zip\` |"
-            echo "| macOS | arm64 | DMG | \`tianji-sizhu-$V-macos-arm64.dmg\` |"
-            echo "| macOS | amd64 | DMG | \`tianji-sizhu-$V-macos-amd64.dmg\` |"
-            echo "| macOS | arm64 | 免安装 | \`tianji-sizhu-$V-macos-arm64-portable.zip\` |"
-            echo "| macOS | amd64 | 免安装 | \`tianji-sizhu-$V-macos-amd64-portable.zip\` |"
+            echo "| macOS | amd64 | 安装包 (.pkg) | \`tianji-sizhu-$V-macos-amd64-installer.pkg\` |"
+            echo "| macOS | arm64 | 安装包 (.pkg) | \`tianji-sizhu-$V-macos-arm64-installer.pkg\` |"
+            echo "| macOS | amd64 | 免安装 | \`tianji-sizhu-$V-macos-amd64-app.zip\` |"
+            echo "| macOS | arm64 | 免安装 | \`tianji-sizhu-$V-macos-arm64-app.zip\` |"
             echo "| Android | arm64-v8a | APK | \`tianji-sizhu-$V-android-arm64-v8a.apk\` |"
+            echo "| Android | armeabi-v7a | APK | \`tianji-sizhu-$V-android-armeabi-v7a.apk\` |"
+            echo "| Android | x86_64 | APK | \`tianji-sizhu-$V-android-x86_64.apk\` |"
+            echo "| Android | x86 | APK | \`tianji-sizhu-$V-android-x86.apk\` |"
             echo "| Android | universal | APK | \`tianji-sizhu-$V-android-universal.apk\` |"
             echo ""
             echo "### 校验 / Verify"
@@ -358,6 +373,9 @@ jobs:
       - name: Publish
         uses: softprops/action-gh-release@v2
         with:
+          # Explicit tag: workflow_dispatch runs on main, where github.ref_name
+          # would otherwise create a Release named "main".
+          tag_name: v${{ needs.preflight.outputs.version }}
           name: "TianJi-SiZhu v${{ needs.preflight.outputs.version }}"
           body_path: notes.md
           draft: false

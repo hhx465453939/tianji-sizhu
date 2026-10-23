@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 # ============================================================
+# DEPRECATED - superseded by scripts/release/*.sh (CHG-004).
+# Do NOT use on macOS: this script creates a DMG via hdiutil, which hangs in
+# an uninterruptible kernel state on macOS 14 CI runners. Use
+# scripts/release/build-macos.sh (.pkg + .app.zip) instead.
+# ============================================================
 # TianJi-SiZhu Local Build Script (macOS / Linux)
 # Usage: ./scripts/build.sh [--installer]
 # ============================================================

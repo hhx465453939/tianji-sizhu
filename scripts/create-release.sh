@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 # ============================================================
+# DEPRECATED - superseded by scripts/release/*.sh + git tag workflow (CHG-004).
+# Kept for history only; it predates the 8-artifact matrix and still mentions DMG
+# (hdiutil hangs on macOS 14 CI runners - see docs/RELEASE.md).
+# ============================================================
 # TianJi-SiZhu Release Script (macOS / Linux)
 # Usage: ./scripts/create-release.sh [version]
 # Default version: 1.0.0

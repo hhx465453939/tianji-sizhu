@@ -175,7 +175,9 @@ Windows 的 `GetFileVersionInfo` 需要具体语言才能定位字符串表，ne
   - `CFBundleIdentifier` → `com.tianjisizhu.desktop`（默认模板是 `com.wails.tianji-sizhu`，不可接受）
   - `CFBundleShortVersionString` / `CFBundleVersion` → `{{.Info.ProductVersion}}`（保持占位符，由 Wails 解析）
   - `LSMinimumSystemVersion` 保持 `10.13.0`；`NSHighResolutionCapable true`；补 `LSApplicationCategoryType public.app-category.lifestyle`
-- DMG：`hdiutil create -volname "天机四柱 <ver> (<arch>)" -srcfolder <staging> -fs HFS+ -format UDZO -ov <out>`；staging = `tianji-sizhu.app` + `/Applications` 符号链接 + `安装说明.txt`。
+- **安装包（`.pkg`）**：`pkgbuild --root <stage> --identifier com.tianjisizhu.desktop --version <ver> --install-location /Applications --ownership recommended <out>`；stage 内只放 `tianji-sizhu.app`。
+  **DMG 禁用**：`hdiutil` 在 macOS 14 CI runner 上进内核不可中断态（实测 25min+，SIGKILL 无效）；`pkgbuild` 是纯文件打包，不挂载镜像，不会 hang。
+- **免安装包（`.app.zip`）**：`ditto -c -k --keepParent`（保留 ad-hoc 签名与符号链接）。
 - 签名：接受 ad-hoc（`codesign --force --deep --sign -`，Wails 自动执行）。CI 断言：
   - `codesign --verify --deep --strict` 返回 0
   - `codesign -dv --verbose=4` 输出含 `Signature=adhoc`
@@ -241,7 +243,7 @@ Windows 的 `GetFileVersionInfo` 需要具体语言才能定位字符串表，ne
   - `build/darwin/Info.plist`（定制 bundle id）
 - 不入库：`build/windows/installer/wails_tools.nsh`、`build/windows/installer/tmp/`、`build/bin/`（构建产物）。
 - 升级 Wails 后必须 `diff` 上游模板（`pkg/buildassets/build/**`）确认无新增字段被漏掉；结论写入 TRACEABILITY。
-- **美术变量声明**：`appicon.png` 的图形/配色、`Info.plist` 的显示名文案、DMG 卷名文案字符串均可随品牌演进替换，**不触发**本 CHG 的验收重跑；仅当尺寸、格式、路径、签名对象变化时才需重跑 L2–L4。
+- **美术变量声明**：`appicon.png` 的图形/配色、`Info.plist` 的显示名文案等字符串均可随品牌演进替换，**不触发**本 CHG 的验收重跑；仅当尺寸、格式、路径、签名对象变化时才需重跑 L2–L4。
 
 ## 3. 接口契约
 
@@ -252,12 +254,12 @@ Windows 的 `GetFileVersionInfo` 需要具体语言才能定位字符串表，ne
 | `lib.sh` | 公共函数：日志、版本、host guard、断言 | 被 source | — |
 | `version.sh` | 版本单一源 | `sync` / `check` / `tag` | 0/1 |
 | `build-windows.sh` | 单架构构建 + NSIS | `--arch {amd64,arm64}` | 0/1/2/3 |
-| `build-macos.sh` | 单架构构建 + DMG | `--arch {amd64,arm64}` | 0/1/2/3 |
+| `build-macos.sh` | 单架构构建 + .pkg + app.zip | `--arch {amd64,arm64}` | 0/1/2/3 |
 | `package-portable.sh` | 免安装 ZIP | `--os {windows,macos} --arch {amd64,arm64}` | 0/1/3 |
 | `verify-artifacts.sh` | L2 校验 + 生成 manifest | `--dist <dir>` | 0/1 |
 | `checksums.sh` | 生成 `SHA256SUMS-<ver>.txt` | `--dist <dir>` | 0/1 |
 | `smoke-windows.ps1` | L3 安装/卸载生命周期 | `-Installer <path> -ExpectArch` | 0/1 |
-| `smoke-macos.sh` | L4 挂载/启动/清理 | `--dmg <path> --expect-arch` | 0/1 |
+| `smoke-macos.sh` | L4 pkg 展开 / zip 解压 + 启动 + 清理 | `--pkg <path>` 或 `--zip <path>` + `--expect-arch` | 0/1 |
 | `clean.sh` | 清洁室 | `--dry-run`、`--all` | 0/1 |
 | `release.sh` | 本地编排（= CI 同序） | `--dry-run`、`--cleanroom`、`--skip-tests` | 0/1/2/3 |
 
@@ -351,7 +353,7 @@ scripts/release/*                        ← 本 CHG 新增
 | Gate | 判据 | 违规处置 |
 |------|------|----------|
 | 安全 | 仓库内无证书/私钥；`gh-release` 只读 `GITHUB_TOKEN`；不引导用户全局关闭 Gatekeeper | 阻止合并 |
-| 体积 | setup.exe ≤ 28 MB；portable.zip ≤ 22 MB；DMG ≤ 30 MB（M1 记录真实基线后允许 ±20%，超区间需在本 SPEC 追加说明） | 阻断发布 |
+| 体积 | setup.exe ≤ 28 MB；portable.zip ≤ 22 MB；installer.pkg ≤ 30 MB；app.zip ≤ 30 MB（M1 记录真实基线后允许 ±20%，超区间需在本 SPEC 追加说明） | 阻断发布 |
 | 兼容 | `minSdk` 无意义；桌面端最低系统：Windows 10 1809+（WebView2）、macOS 10.13+ | 文档标注 |
 | 隔离 | `env-check.sh` PASS；`GOCACHE/GOMODCACHE/GOBIN/TMPDIR` 全在项目内 | 阻断发布 |
 | 供应链 | release action 固定版本；`pnpm --frozen-lockfile`；`go mod verify` 通过 | 阻断发布 |

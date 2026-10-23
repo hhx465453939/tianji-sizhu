@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
-# Build one macOS architecture: app bundle + DMG.
+# Build one macOS architecture: app bundle + .pkg installer + portable .app zip.
 #
 #   build-macos.sh --arch amd64|arm64 [--skip-frontend]
 #
 # macOS packages can ONLY be built on macOS (no WebKit/SDK on Linux).
+#
+# Installer format is .pkg, NOT .dmg: hdiutil enters an uninterruptible kernel
+# state on macOS 14 GitHub runners (25+ min, SIGKILL ineffective). pkgbuild is a
+# pure file packer - no image mounting, no kernel involvement - so it cannot hang.
+#
 # Exit: 0 ok | 1 check failed | 2 precondition failed | 3 build failed
 set -euo pipefail
 
@@ -26,7 +31,7 @@ require_cmd go
 require_cmd wails
 require_cmd node
 require_cmd ditto
-require_cmd hdiutil
+require_cmd pkgbuild
 require_cmd codesign
 
 VERSION="$(read_version)"
@@ -73,23 +78,29 @@ ok "codesign verified (adhoc)"
 rm -rf "$OUT/tianji-sizhu.app"
 cp -R "$APP" "$OUT/tianji-sizhu.app"
 
-# --- DMG ---------------------------------------------------------------
-STAGE="$OUT/dmg-$ARCH"
-rm -rf "$STAGE"; mkdir -p "$STAGE"
-cp -R "$APP" "$STAGE/"
-ln -s /Applications "$STAGE/Applications"
-cat > "$STAGE/安装说明.txt" <<'TXT'
-首次打开若提示"无法验证开发者"：
-  右键 tianji-sizhu.app → 打开 → 打开
-或执行：
-  xattr -dr com.apple.quarantine /Applications/tianji-sizhu.app
-（请勿全局关闭 Gatekeeper）
-TXT
+# --- installer (.pkg) ---------------------------------------------------
+# pkgbuild packs a directory tree without mounting anything, so it is immune to
+# the hdiutil hang that forced us off DMG.
+PKG_STAGE="$OUT/pkg-$ARCH"
+rm -rf "$PKG_STAGE"; mkdir -p "$PKG_STAGE"
+cp -R "$APP" "$PKG_STAGE/"
 
-# DMG via hdiutil is unreliable on macOS 14 CI runners: it hung for 25+ minutes
-# in an uninterruptible kernel state (SIGKILL had no effect). Ship a signed
-# .app zip instead - ditto preserves the code signature and symlinks, and the
-# user drags the app to /Applications. Install hints live in the Release notes.
+PKG_OUT="$OUT/tianji-sizhu-$VERSION-macos-$ARCH-installer.pkg"
+rm -f "$PKG_OUT"
+run_timeout 420 pkgbuild \
+  --root "$PKG_STAGE" \
+  --identifier "com.tianjisizhu.desktop" \
+  --version "$VERSION" \
+  --install-location "/Applications" \
+  --ownership recommended \
+  "$PKG_OUT" >/dev/null 2>&1 \
+  || die "pkgbuild failed or timed out" 3
+
+[ -s "$PKG_OUT" ] || die "pkgbuild produced no output" 3
+ok "installer.pkg: $(basename "$PKG_OUT")  $(file_bytes "$PKG_OUT") bytes"
+
+# --- portable (.app zip) ------------------------------------------------
+# ditto preserves the ad-hoc signature and symlinks; plain zip corrupts both.
 ZIP_OUT="$OUT/tianji-sizhu-$VERSION-macos-$ARCH-app.zip"
 rm -f "$ZIP_OUT"
 run_timeout 420 ditto -c -k --keepParent "$APP" "$ZIP_OUT" >/dev/null 2>&1 \

@@ -9,19 +9,21 @@
 
 | # | 平台 | 架构 | 形态 | 文件名 |
 |---|------|------|------|--------|
-| 1 | Windows | amd64 | 安装包 | `tianji-sizhu-<ver>-windows-amd64-setup.exe` |
-| 2 | Windows | arm64 | 安装包 | `tianji-sizhu-<ver>-windows-arm64-setup.exe` |
-| 3 | Windows | amd64 | 免安装 | `tianji-sizhu-<ver>-windows-amd64-portable.zip` |
-| 4 | Windows | arm64 | 免安装 | `tianji-sizhu-<ver>-windows-arm64-portable.zip` |
-| 5 | macOS | arm64 | 签名 app 包 | `tianji-sizhu-<ver>-macos-arm64-app.zip` |
-| 6 | macOS | amd64 | 签名 app 包 | `tianji-sizhu-<ver>-macos-amd64-app.zip` |
-| 7 | — | — | 校验清单 | `SHA256SUMS-<ver>.txt` |
-| 8 | — | — | 断言清单 | `artifacts-manifest.json` |
+| 1 | Windows | amd64 | 安装包（NSIS） | `tianji-sizhu-<ver>-windows-amd64-setup.exe` |
+| 2 | Windows | arm64 | 安装包（NSIS） | `tianji-sizhu-<ver>-windows-arm64-setup.exe` |
+| 3 | macOS | amd64 | 安装包（pkg） | `tianji-sizhu-<ver>-macos-amd64-installer.pkg` |
+| 4 | macOS | arm64 | 安装包（pkg） | `tianji-sizhu-<ver>-macos-arm64-installer.pkg` |
+| 5 | Windows | amd64 | 免安装 | `tianji-sizhu-<ver>-windows-amd64-portable.zip` |
+| 6 | Windows | arm64 | 免安装 | `tianji-sizhu-<ver>-windows-arm64-portable.zip` |
+| 7 | macOS | amd64 | 免安装 | `tianji-sizhu-<ver>-macos-amd64-app.zip` |
+| 8 | macOS | arm64 | 免安装 | `tianji-sizhu-<ver>-macos-arm64-app.zip` |
+| 9 | — | — | 校验清单 | `SHA256SUMS-<ver>.txt` |
+| 10 | — | — | 断言清单 | `artifacts-manifest.json` |
 
-另有 Android APK（`arm64-v8a` / `armeabi-v7a` / `x86_64` / `universal`）与 Linux `legacy` 包。
+另有 Android APK（`arm64-v8a` / `armeabi-v7a` / `x86_64` / `x86` / `universal`）。Linux 桌面端已从流水线移除（legacy）。
 **缺一不发**；缺某架构就如实缺并在 Release Notes 声明，严禁用 x64 包冒充 arm64。
 
-> macOS 不再提供 DMG：`hdiutil` 在 macOS 14 CI runner 上会挂死在内核态（SIGKILL 无效）。
+> macOS 安装包用 `.pkg`（`pkgbuild`），**不再提供 DMG**：`hdiutil` 在 macOS 14 CI runner 上会挂死在内核态（SIGKILL 无效）。
 > `.app.zip` 由 `ditto -c -k --keepParent` 生成，保留 ad-hoc 签名与符号链接，解压后拖入 `/Applications` 即可。
 
 ---
@@ -70,9 +72,9 @@ bash scripts/release/build-windows.sh --arch arm64
 bash scripts/release/build-macos.sh --arch arm64
 bash scripts/release/build-macos.sh --arch amd64
 
-# 免安装包
+# 免安装包（macOS 的 app.zip 由 build-macos.sh 直接产出）
 bash scripts/release/package-portable.sh --os windows --arch amd64
-bash scripts/release/package-portable.sh --os macos --arch arm64
+bash scripts/release/package-portable.sh --os windows --arch arm64
 
 # 校验 + 清单（本机只有部分平台时加 --allow-partial）
 bash scripts/release/verify-artifacts.sh --allow-partial
@@ -82,7 +84,12 @@ bash scripts/release/checksums.sh
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/smoke-windows.ps1 \
   -Installer ".tmp/release/1.2.0/tianji-sizhu-1.2.0-windows-amd64-setup.exe" \
   -ExpectVersion 1.2.0 -ExpectArch amd64
-bash scripts/release/smoke-macos.sh --dmg .tmp/release/1.2.0/xxx.dmg --expect-arch arm64
+bash scripts/release/smoke-macos.sh \
+  --pkg .tmp/release/1.2.0/tianji-sizhu-1.2.0-macos-arm64-installer.pkg \
+  --expect-arch arm64 --expect-version 1.2.0
+bash scripts/release/smoke-macos.sh \
+  --zip .tmp/release/1.2.0/tianji-sizhu-1.2.0-macos-arm64-app.zip \
+  --expect-arch arm64 --expect-version 1.2.0
 ```
 
 产物落点：`.tmp/release/<version>/`（git 忽略）。
