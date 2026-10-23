@@ -298,9 +298,11 @@ jobs:
         with:
           pattern: release-{windows,macos}-*
           merge-multiple: true
-          path: .tmp/release/${{ needs.preflight.outputs.version }}
+          # Artifacts keep a "<version>/<file>" prefix, so land them one level up
+          # to avoid .tmp/release/<ver>/<ver>/<file>.
+          path: .tmp/release
 
-      - name: Verify artifacts and emit manifest (strict, all 8 required)
+      - name: Verify artifacts and emit manifest (strict, all 6 required)
         run: |
           set -euo pipefail
           bash scripts/release/verify-artifacts.sh
