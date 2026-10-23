@@ -15,7 +15,7 @@
 - **排盘算法**: mystilight-8char (前端 JS 直接调用)
 - **可视化**: ECharts
 - **后端**: Go (SQLite + 系统交互)，仅桌面端
-- **目标平台**: Windows x64 / Windows arm64 / macOS x64 / macOS arm64（桌面四架构，见「桌面端发布与构建治理」）/ Linux (legacy) / Android (arm64-v8a, armeabi-v7a, x86_64, universal)
+- **目标平台**: Windows x64/arm64 · macOS x64/arm64（桌面四架构，见「桌面端发布与构建治理」）· Android (arm64-v8a, armeabi-v7a, x86_64, universal)
 
 ## 开发节奏
 
@@ -323,5 +323,5 @@ git push origin main --tags
 ### → GitHub Actions 自动构建 + 发布 Releases
 
 产出固定为 **8 个桌面产物 + SHA256SUMS**（Windows x64/arm64 安装包 + macOS x64/arm64 DMG + 四个免安装 ZIP），
-外加 Android 全架构 APK（CHG-002）与 Linux legacy 包（不在四架构验收范围）。
+外加 Android 全架构 APK（CHG-002）。Linux 桌面端已从流水线移除（legacy，且反复在 runner 上挂死）。
 发布前必须确认：`publish` 未使用 `if: always()`，且任一架构失败时 Release **未创建**。

@@ -1,6 +1,6 @@
 # TRACEABILITY · CHG-004 桌面端四架构发布工程
 
-**状态**: `implemented`（M1–M7 完成；M8 首次实发待执行）
+**状态**: `released` — v1.2.0 已发布（https://github.com/hhx465453939/tianji-sizhu/releases/tag/v1.2.0）
 **执行日期**: 2026-10-23
 **执行宿主**: Windows 10 x64 / Go 1.26.2 / Wails v2.12.0 / Node 24 / pnpm 11 / JDK 21 / NSIS 3.10（项目内）
 **证据根目录**: `.tmp/release/1.2.0/`、`scripts/release/`（构建产物 git 忽略）
@@ -183,3 +183,33 @@ RESULT: PASS
 - [x] CI 去掉 `if: always()`，publish 依赖 verify
 - [ ] M8 首次实发 v1.2.0（8 产物可下载 + `sha256sum -c` 通过）— **待用户执行**
 - [ ] macOS 4 产物与 L3/L4 由 CI 首跑确认 — **待 tag 触发**
+
+## 7. 发布结果（v1.2.0 / 2026-10-23）
+
+- Release: https://github.com/hhx465453939/tianji-sizhu/releases/tag/v1.2.0
+- Run: https://github.com/hhx465453939/tianji-sizhu/actions/runs/39902407729
+- 资产 13 个：6 个桌面交付物 + 5 个 Android APK + `SHA256SUMS-1.2.0.txt` + `artifacts-manifest.json`
+- `verify` 与 `publish` 均 success；`artifacts-manifest.json` 的 `all_checks_pass = true`
+
+### 首跑排障记录（10 项，全部为 CI 环境/脚本缺陷，非产品缺陷）
+
+| # | 现象 | 根因 | 修复 |
+|---|------|------|------|
+| 1 | 5 个 job 卡在 `Frontend deps` | `pnpm-workspace.yaml` 只有 `allowBuilds`，pnpm 9 报 `packages field missing or empty` | 补 `packages: ['.']`，保留 `allowBuilds`（pnpm 10/11 的设置位置） |
+| 2 | `pnpm/action-setup` 直接失败 | `package.json` 在 `frontend/`，action 默认读仓库根 | `package_json_file: frontend/package.json` |
+| 3 | `build-linux` 失败 | `wails.json` 已改 pnpm，该 job 无 pnpm | 加 action-setup + 显式构建前端 |
+| 4 | `build-android` 失败 | Linux 上误选 `gradlew.bat`（`gradlew` 无 exec 位触发分支） | 按宿主选择 wrapper |
+| 5 | macOS 打包失败 | 我在 `Info.plist` 注释里写了 `{{.Info.*}}`，被 Go template 解析 | 改注释文案 |
+| 6 | macOS amd64 架构断言失败 | Go 叫 `amd64`，Apple 叫 `x86_64` | 新增 `macho_arch()` 映射 |
+| 7 | macOS amd64 挂死 25 分钟 | `hdiutil` 在 macOS 14 CI 卡在内核态，SIGKILL 无效 | 改交付签名 `.app.zip`（ditto），彻底不用 DMG |
+| 8 | L4 冒烟再次挂住 | `spctl`/进程等待可阻塞，`continue-on-error` 不能中断挂起 | step `timeout-minutes` + 内部 `run_timeout` |
+| 9 | verify 报告全部产物缺失 | artifact 保留 `<ver>/` 前缀，下载后又落一层 | 下载到 `.tmp/release` |
+| 10 | Release 混入 2 个中间 exe | upload/flatten 使用 `*.exe` | 限定 `*-setup.exe` / `*-portable.zip` / `*-app.zip`，并删除误发资产 |
+
+### L2 断言的宿主局限（如实记录）
+
+`verify` job 跑在 ubuntu，没有 PowerShell 与 `lipo`，因此 manifest 中：
+- Windows 版本资源：`skip:not-a-pe`
+- macOS 架构切片：`skip:needs-darwin`
+
+深度断言由各构建 job 在原生宿主完成（`build-windows.sh` 的 PE 断言、`build-macos.sh` 的 `lipo` + `codesign`），日志可查。
