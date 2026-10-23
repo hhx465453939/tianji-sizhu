@@ -58,10 +58,11 @@ APP="$RELEASE_ROOT/build/bin/tianji-sizhu.app"
 [ -d "$APP" ] || die "app bundle missing: $APP" 3
 
 # Architecture assertion: exactly the requested single slice.
+MACHO_ARCH="$(macho_arch "$ARCH")"
 SLICES="$(lipo -archs "$APP/Contents/MacOS/tianji-sizhu")"
 case "$SLICES" in
-  *"$ARCH"*) ok "bundle slice: $SLICES" ;;
-  *) die "bundle slice '$SLICES' does not contain $ARCH" 1 ;;
+  *"$MACHO_ARCH"*) ok "bundle slice: $SLICES (go arch $ARCH)" ;;
+  *) die "bundle slice '$SLICES' does not contain $MACHO_ARCH (go arch $ARCH)" 1 ;;
 esac
 
 # Ad-hoc signature must be present (kernel refuses unsigned arm64 binaries).

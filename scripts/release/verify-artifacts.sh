@@ -83,8 +83,9 @@ emit() {
       local slice
       slice="$(lipo -archs "$path" 2>/dev/null || true)"
       if [ -z "$slice" ]; then archcheck="skip:not-macho"; else
+        macho_want="$(macho_arch "$arch")"
         archcheck="macho:$slice"
-        case "$slice" in *"$arch"*) ;; *) warn "$file slice '$slice' lacks $arch"; FAIL=1 ;; esac
+        case "$slice" in *"$macho_want"*) ;; *) warn "$file slice '$slice' lacks $macho_want (go arch $arch)"; FAIL=1 ;; esac
       fi
     else
       archcheck="skip:needs-darwin"

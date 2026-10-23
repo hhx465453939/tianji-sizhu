@@ -39,8 +39,9 @@ hdiutil attach -nobrowse -readonly -mountpoint "$MNT" "$DMG" >/dev/null || die "
 APP="$MNT/tianji-sizhu.app"
 [ -d "$APP" ] || die "app bundle missing inside dmg" 1
 
+MACHO_ARCH="$(macho_arch "$ARCH")"
 SLICES="$(lipo -archs "$APP/Contents/MacOS/tianji-sizhu")"
-case "$SLICES" in *"$ARCH"*) ok "slice: $SLICES" ;; *) die "slice '$SLICES' lacks $ARCH" 1 ;; esac
+case "$SLICES" in *"$MACHO_ARCH"*) ok "slice: $SLICES (go arch $ARCH)" ;; *) die "slice '$SLICES' lacks $MACHO_ARCH (go arch $ARCH)" 1 ;; esac
 
 codesign --verify --deep --strict "$APP" || die "signature invalid" 1
 SIG="$(codesign -dv --verbose=4 "$APP" 2>&1 | grep -E '^Signature=' || true)"

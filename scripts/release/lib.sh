@@ -85,6 +85,14 @@ sha256_of() {
   fi
 }
 
+# macho_arch <go-arch> -> Apple/Mach-O slice name (Go says amd64, Apple says x86_64)
+macho_arch() {
+  case "$1" in
+    amd64) echo "x86_64" ;;
+    *)     echo "$1" ;;
+  esac
+}
+
 # pe_machine <exe> -> prints "0x8664" (amd64) / "0xAA64" (arm64) / "0x014C" (i386)
 pe_machine() {
   python -c '
