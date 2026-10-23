@@ -4,7 +4,7 @@
   Committed on purpose: Wails only writes build/ templates when the file is
   missing, so this keeps the bundle identity stable and auditable.
 
-  Kept as {{.Info.*}} placeholders so the version always comes from
+  Version fields stay as template placeholders so the value always comes from
   wails.json.info (which is driven by the root VERSION file).
 -->
 <plist version="1.0">
