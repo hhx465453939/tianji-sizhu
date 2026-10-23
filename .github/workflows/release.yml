@@ -335,10 +335,14 @@ jobs:
 
       - name: Flatten assets
         run: |
+          set -euo pipefail
           mkdir -p out
-          find release-assets -type f \( -name '*.exe' -o -name '*.zip' -o -name '*.dmg' \
-            -o -name '*.apk' -o -name '*.tar.gz' -o -name 'SHA256SUMS-*.txt' \
-            -o -name 'artifacts-manifest.json' \) -exec cp {} out/ \;
+          # Deliverable shapes only; intermediate binaries (bare .exe) are excluded.
+          find release-assets -type f \( \
+            -name '*-setup.exe' -o -name '*-portable.zip' -o -name '*-app.zip' \
+            -o -name '*.apk' -o -name '*-legacy.tar.gz' \
+            -o -name 'SHA256SUMS-*.txt' -o -name 'artifacts-manifest.json' \
+          \) -exec cp {} out/ \;
           ls -la out/
 
       - name: Generate release notes
