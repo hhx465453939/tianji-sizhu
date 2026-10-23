@@ -152,4 +152,14 @@ export const webAdapter: PlatformAdapter = {
 
   copyText,
   saveFile,
+
+  // A browser/Android host always has a working store, so there is no startup
+  // failure to report; the data lives in localStorage.
+  async startupError() {
+    return ''
+  },
+
+  async dataDir() {
+    return 'localStorage'
+  },
 }

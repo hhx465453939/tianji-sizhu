@@ -84,4 +84,22 @@ export const wailsAdapter: PlatformAdapter = {
       return false
     }
   },
+
+  async startupError() {
+    try {
+      const { StartupError } = await bindings()
+      return (await StartupError()) || ''
+    } catch {
+      return ''
+    }
+  },
+
+  async dataDir() {
+    try {
+      const { DataDir } = await bindings()
+      return (await DataDir()) || ''
+    } catch {
+      return ''
+    }
+  },
 }

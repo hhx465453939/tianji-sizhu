@@ -55,4 +55,8 @@ export interface PlatformAdapter {
   exportJSON(): Promise<string>
   copyText(text: string): Promise<boolean>
   saveFile(filename: string, content: string): Promise<boolean>
+  /** Non-empty when local persistence is unavailable (desktop). */
+  startupError(): Promise<string>
+  /** Resolved data directory, for diagnostics display. */
+  dataDir(): Promise<string>
 }

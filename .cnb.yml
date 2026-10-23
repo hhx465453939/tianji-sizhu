@@ -35,15 +35,17 @@ $:
 
         - name: build windows
           env:
-            CGO_ENABLED: "1"
-            CC: x86_64-w64-mingw32-gcc
-            CXX: x86_64-w64-mingw32-g++
+            # Windows backend is pure Go (SPEC F2): no mingw/nsis cross toolchain needed.
+            CGO_ENABLED: "0"
           script: |
             export PATH="$(go env GOPATH)/bin:$PATH"
-            wails build -platform windows/amd64 -nsis
-            echo "=== Windows build output ==="
-            ls -la build/bin/ || echo "No build/bin"
-            find build/bin -type f -name "*.exe" | head -10
+            cd frontend && npm install --no-audit --no-fund && cd ..
+            bash scripts/release/build-windows.sh --arch amd64
+            bash scripts/release/package-portable.sh --os windows --arch amd64
+            bash scripts/release/build-windows.sh --arch arm64
+            bash scripts/release/package-portable.sh --os windows --arch arm64
+            echo "=== Desktop artifacts ==="
+            ls -la .tmp/release/*/ || true
 
         - name: build linux
           script: |
@@ -64,20 +66,18 @@ $:
 
         - name: package artifacts
           script: |
-            TAG="${CNB_BRANCH}"
+            V=$(cat VERSION)
             mkdir -p release
-            # Windows exe / installer
-            INSTALLER=$(find build/bin -type f -name "*installer*" | head -1)
-            if [ -n "$INSTALLER" ]; then
-              cp "$INSTALLER" "release/tianji-sizhu-${TAG}-windows-amd64-installer.exe"
+            # Desktop deliverables (setup/portable/sums/manifest) from scripts/release
+            if [ -d ".tmp/release/$V" ]; then
+              cp .tmp/release/$V/*-setup.exe release/ 2>/dev/null || true
+              cp .tmp/release/$V/*-portable.zip release/ 2>/dev/null || true
+              cp .tmp/release/$V/SHA256SUMS-*.txt release/ 2>/dev/null || true
+              cp .tmp/release/$V/artifacts-manifest.json release/ 2>/dev/null || true
             fi
-            PLAIN_EXE=$(find build/bin -type f -name "tianji-sizhu.exe" | head -1)
-            if [ -n "$PLAIN_EXE" ]; then
-              cp "$PLAIN_EXE" "release/tianji-sizhu-${TAG}-windows-amd64.exe"
-            fi
-            # Linux binary
+            # Linux legacy binary
             if [ -f "build/bin/tianji-sizhu" ]; then
-              tar czf "release/tianji-sizhu-${TAG}-linux-amd64.tar.gz" -C build/bin tianji-sizhu
+              tar czf "release/tianji-sizhu-${V}-linux-amd64-legacy.tar.gz" -C build/bin tianji-sizhu
             fi
             # Android APKs are already written to release/ by scripts/android-build.sh
             echo "=== Release artifacts ==="
@@ -95,15 +95,19 @@ $:
               ### 下载
               | 平台 | 文件 |
               |------|------|
-              | Windows (安装程序) | *-installer.exe |
-              | Windows (免安装) | *-windows-amd64.exe |
-              | Linux | *-linux-amd64.tar.gz |
+              | Windows amd64（安装包） | *-windows-amd64-setup.exe |
+              | Windows arm64（安装包） | *-windows-arm64-setup.exe |
+              | Windows amd64（免安装） | *-windows-amd64-portable.zip |
+              | Windows arm64（免安装） | *-windows-arm64-portable.zip |
+              | Linux（legacy） | *-linux-amd64-legacy.tar.gz |
               | Android (arm64-v8a) | *-android-arm64-v8a.apk |
               | Android (armeabi-v7a) | *-android-armeabi-v7a.apk |
               | Android (x86_64) | *-android-x86_64.apk |
               | Android (通用) | *-android-universal.apk |
 
-              > 安卓安装包使用项目内调试签名，侧载时需允许“未知来源”。
+              > macOS 构建需 macOS 宿主，由 GitHub Actions 产出，见对应 Release。
+              > Windows / Android 安装包未做代码签名，首次运行需允许“仍要运行”/“未知来源”。
+              > 完整性校验见 `SHA256SUMS-*.txt` 与 `artifacts-manifest.json`。
 
         - name: upload attachments
           image: cnbcool/attachments:latest

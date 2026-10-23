@@ -1,9 +1,36 @@
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import Home from './pages/Home'
 import Result from './pages/Result'
 import Records from './pages/Records'
 import Settings from './pages/Settings'
 import ThemeToggle from './components/ThemeToggle'
+import { platform } from './lib/platform'
+
+/**
+ * Surfaces a persistence failure instead of showing a window that silently
+ * cannot save (CHG-004 ADR-003). Desktop only; the web adapter never fails.
+ */
+function StartupBanner() {
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    void platform.startupError().then(msg => { if (alive) setMessage(msg) })
+    return () => { alive = false }
+  }, [])
+
+  if (!message) return null
+
+  return (
+    <div
+      role="alert"
+      className="border-b border-accent-seal/40 bg-accent-seal/10 px-4 py-2 text-center text-xs leading-relaxed text-accent-seal"
+    >
+      本地存储不可用，排盘记录无法保存：{message}
+    </div>
+  )
+}
 
 function NavBar() {
   const navigate = useNavigate()
@@ -58,6 +85,7 @@ function App() {
     <HashRouter>
       <div className="min-h-screen bg-surface-app text-fg-2 font-body">
         <NavBar />
+        <StartupBanner />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/result" element={<Result />} />

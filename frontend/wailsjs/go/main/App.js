@@ -6,6 +6,10 @@ export function CopyToClipboard(arg1) {
   return window['go']['main']['App']['CopyToClipboard'](arg1);
 }
 
+export function DataDir() {
+  return window['go']['main']['App']['DataDir']();
+}
+
 export function DeleteChart(arg1) {
   return window['go']['main']['App']['DeleteChart'](arg1);
 }
@@ -28,6 +32,10 @@ export function SaveChart(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) 
 
 export function SaveFileDialog(arg1) {
   return window['go']['main']['App']['SaveFileDialog'](arg1);
+}
+
+export function StartupError() {
+  return window['go']['main']['App']['StartupError']();
 }
 
 export function WriteFile(arg1, arg2) {

@@ -1,150 +1,259 @@
-# ============================================================
-# TianJi-SiZhu Release Pipeline
-# ============================================================
+# TianJi-SiZhu Release Pipeline (CHG-004 ADR-009)
+#
+# Matrix: windows {amd64, arm64} + macos {arm64, amd64} + android + linux(legacy)
+# Gate:   every build job must pass before a Release is created (no if: always()).
+# Single version source: the VERSION file. Tag must equal v<VERSION>.
+
 name: Release
 
 on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Create a GitHub Release (false = upload artifacts only)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   GO_VERSION: "1.23"
   NODE_VERSION: "22"
-  APP_NAME: "tianji-sizhu"
 
 jobs:
-  build-windows:
+  # ---------------------------------------------------------------- preflight
+  preflight:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Read and verify version
+        id: v
+        run: |
+          set -euo pipefail
+          V="$(tr -d '[:space:]' < VERSION)"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          bash scripts/release/version.sh check
+
+      - name: Tag must match VERSION
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+          EXPECT="v$(tr -d '[:space:]' < VERSION)"
+          [ "$GITHUB_REF_NAME" = "$EXPECT" ] || {
+            echo "::error::tag $GITHUB_REF_NAME does not match VERSION ($EXPECT)"
+            exit 1
+          }
+
+      - name: Lockfile present
+        run: test -f frontend/pnpm-lock.yaml
+
+  # ------------------------------------------------------- windows (matrix x2)
+  build-win:
+    needs: preflight
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
     runs-on: windows-2022
+    permissions:
+      contents: read
+    env:
+      TIANJI_ROOT: ${{ github.workspace }}
+      CGO_ENABLED: "0"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Install Wails CLI
         shell: bash
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      - name: Verify tools
+      - name: Project-local NSIS
+        shell: bash
+        run: bash scripts/toolchain-nsis.sh
+
+      - name: Frontend deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Frontend build
+        working-directory: frontend
+        run: pnpm build
+
+      - name: Build app + installer
         shell: bash
         run: |
-          echo "Go: $(go version)"
-          echo "Node: $(node --version)"
-          echo "npm: $(npm --version)"
-          echo "GOPATH: $(go env GOPATH)"
-          echo "PATH: $PATH"
-          wails version || echo "WARN: wails not in PATH yet"
-          which wails || echo "WARN: which wails failed"
+          set -euo pipefail
+          bash scripts/release/build-windows.sh --arch "${{ matrix.arch }}" --skip-frontend
+          bash scripts/release/package-portable.sh --os windows --arch "${{ matrix.arch }}"
 
-      - name: Build
-        shell: bash
+      - name: L3 install/uninstall lifecycle
+        shell: pwsh
+        continue-on-error: true
         run: |
-          wails build -platform windows/amd64 -nsis
-          echo "=== build/bin contents ==="
-          ls -la build/bin/ || echo "build/bin not found"
+          $v = (Get-Content VERSION -Raw).Trim()
+          ./scripts/release/smoke-windows.ps1 `
+            -Installer ".tmp/release/$v/tianji-sizhu-$v-windows-${{ matrix.arch }}-setup.exe" `
+            -ExpectVersion $v -ExpectArch "${{ matrix.arch }}"
 
-      - name: Find installer
-        id: find
-        shell: bash
-        run: |
-          echo "=== Looking for installer ==="
-          find build/bin -type f -name "*.exe" | head -10
-          INSTALLER=$(find build/bin -type f -name "*installer*" | head -1)
-          if [ -z "$INSTALLER" ]; then
-            INSTALLER=$(find build/bin -type f -name "*.exe" | head -1)
-          fi
-          echo "installer_path=$INSTALLER" >> $GITHUB_OUTPUT
-          echo "Selected: $INSTALLER"
-
-      - name: Upload
-        if: steps.find.outputs.installer_path != ''
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: windows-installer
-          path: ${{ steps.find.outputs.installer_path }}
+          name: release-windows-${{ matrix.arch }}
+          path: |
+            .tmp/release/*/*.exe
+            .tmp/release/*/*.zip
+          if-no-files-found: error
 
-  build-macos:
+  # --------------------------------------------------------- macos (matrix x2)
+  build-mac:
+    needs: preflight
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, amd64]
     runs-on: macos-14
+    permissions:
+      contents: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Install Wails CLI
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      - name: Verify tools
+      - name: Frontend deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Frontend build
+        working-directory: frontend
+        run: pnpm build
+
+      - name: Build app + dmg
         run: |
-          echo "Go: $(go version)"
-          echo "Node: $(node --version)"
-          wails version
+          set -euo pipefail
+          bash scripts/release/build-macos.sh --arch "${{ matrix.arch }}" --skip-frontend
+          bash scripts/release/package-portable.sh --os macos --arch "${{ matrix.arch }}"
 
-      - name: Build
+      - name: L4 mount/launch lifecycle
+        continue-on-error: true
         run: |
-          wails build -platform darwin/universal
-          echo "=== build/bin contents ==="
-          ls -la build/bin/
+          V="$(tr -d '[:space:]' < VERSION)"
+          bash scripts/release/smoke-macos.sh \
+            --dmg ".tmp/release/$V/tianji-sizhu-$V-macos-${{ matrix.arch }}.dmg" \
+            --expect-arch "${{ matrix.arch }}" --expect-version "$V"
 
-      - name: Create DMG
-        run: |
-          ls -la build/bin/
-          mkdir -p dmg-staging
-          cp -r "build/bin/${{ env.APP_NAME }}.app" dmg-staging/
-          ln -s /Applications dmg-staging/Applications
-          hdiutil create \
-            -volname "TianJi-SiZhu" \
-            -srcfolder dmg-staging \
-            -ov -format UDZO \
-            "build/bin/${{ env.APP_NAME }}-darwin-universal.dmg"
-
-      - name: Upload
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: macos-dmg
-          path: build/bin/${{ env.APP_NAME }}-darwin-universal.dmg
+          name: release-macos-${{ matrix.arch }}
+          path: |
+            .tmp/release/*/*.dmg
+            .tmp/release/*/*.zip
+          if-no-files-found: error
 
-  build-linux:
-    runs-on: ubuntu-22.04
+  # ------------------------------------------------------------- android (kept)
+  build-android:
+    needs: preflight
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      TIANJI_ROOT: ${{ github.workspace }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-java@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
+          distribution: temurin
+          java-version: '21'
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install system deps
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-36 build-tools;36.0.0 platform-tools'
+
+      - name: Frontend deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Android build
+        run: bash scripts/android-build.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-android
+          path: release/*.apk
+          if-no-files-found: error
+
+  # --------------------------------------------------------- linux (legacy)
+  build-linux:
+    needs: preflight
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: System deps
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev build-essential pkg-config
@@ -152,173 +261,139 @@ jobs:
       - name: Install Wails CLI
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      - name: Verify tools
-        run: |
-          echo "Go: $(go version)"
-          echo "Node: $(node --version)"
-          wails version
-
-      - name: Build
+      - name: Build (legacy)
         run: |
           wails build -platform linux/amd64
-          echo "=== build/bin contents ==="
-          ls -la build/bin/
+          cd build/bin && tar czf "tianji-sizhu-linux-amd64.tar.gz" tianji-sizhu
 
-      - name: Package tar.gz
-        run: |
-          cd build/bin
-          tar czf "${{ env.APP_NAME }}-linux-amd64.tar.gz" "${{ env.APP_NAME }}"
-
-      - name: Upload
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: linux-binary
-          path: |
-            build/bin/${{ env.APP_NAME }}-linux-amd64.tar.gz
+          name: release-linux-legacy
+          path: build/bin/tianji-sizhu-linux-amd64.tar.gz
+          if-no-files-found: warn
 
-  build-android:
+  # ------------------------------------------------------------------ verify
+  verify:
+    needs: [preflight, build-win, build-mac]
     runs-on: ubuntu-latest
-    env:
-      TIANJI_ROOT: ${{ github.workspace }}
+    permissions:
+      contents: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Download desktop artifacts
+        uses: actions/download-artifact@v4
         with:
-          version: 9
+          pattern: release-{windows,macos}-*
+          merge-multiple: true
+          path: .tmp/release/${{ needs.preflight.outputs.version }}
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Verify artifacts and emit manifest (strict, all 8 required)
+        run: |
+          set -euo pipefail
+          bash scripts/release/verify-artifacts.sh
+          bash scripts/release/checksums.sh
+
+      - uses: actions/upload-artifact@v4
         with:
-          packages: 'platforms;android-36 build-tools;36.0.0 platform-tools'
+          name: release-verification
+          path: |
+            .tmp/release/*/artifacts-manifest.json
+            .tmp/release/*/SHA256SUMS-*.txt
 
-      - name: Install frontend deps
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile --prefer-offline
-
-      - name: Build web bundle
-        working-directory: frontend
-        run: pnpm build
-
-      - name: Sync Capacitor
-        working-directory: frontend
-        run: npx cap sync android
-
-      - name: Project-local debug keystore
-        run: |
-          mkdir -p "$TIANJI_ROOT/.android/home"
-          keytool -genkeypair -v \
-            -keystore "$TIANJI_ROOT/.android/home/debug.keystore" \
-            -storepass android -keypass android \
-            -alias androiddebugkey \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US"
-
-      - name: Assemble release APKs
-        working-directory: frontend/android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --max-workers=2
-          ls -la app/build/outputs/apk/release/
-
-      - name: Name artifacts
-        run: |
-          VERSION=$(node -p "require('./frontend/package.json').version")
-          mkdir -p release-assets
-          for apk in frontend/android/app/build/outputs/apk/release/*.apk; do
-            base=$(basename "$apk")
-            abi=$(echo "$base" | sed -E 's/^app-(.*)-release\.apk$/\1/')
-            cp "$apk" "release-assets/tianji-sizhu-${VERSION}-android-${abi}.apk"
-          done
-          ls -la release-assets/
-
-      - name: Verify APK metadata
-        run: |
-          AAPT="$ANDROID_HOME/build-tools/36.0.0/aapt2"
-          "$AAPT" dump badging release-assets/*universal*.apk | grep -E "^package:|^sdkVersion|^targetSdkVersion"
-
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-apks
-          path: release-assets/*.apk
-
-  publish-release:
-    needs: [build-windows, build-macos, build-linux, build-android]
-    if: always() && !cancelled()
+  # ----------------------------------------------------------------- publish
+  publish:
+    needs: [preflight, verify, build-android]
+    # Hard gate: no if: always(). A failed matrix leg means no Release.
+    if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.publish == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Download all artifacts
+      - name: Download everything
         uses: actions/download-artifact@v4
         with:
           path: release-assets
 
-      - name: List release assets
-        run: find release-assets -type f | sort
-
-      - name: Generate changelog
+      - name: Flatten assets
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          PREV=$(git tag --sort=-v:refname | grep '^v' | sed -n '2p')
+          mkdir -p out
+          find release-assets -type f \( -name '*.exe' -o -name '*.zip' -o -name '*.dmg' \
+            -o -name '*.apk' -o -name '*.tar.gz' -o -name 'SHA256SUMS-*.txt' \
+            -o -name 'artifacts-manifest.json' \) -exec cp {} out/ \;
+          ls -la out/
+
+      - name: Generate release notes
+        run: |
+          set -euo pipefail
+          V="$(tr -d '[:space:]' < VERSION)"
+          PREV=$(git tag --sort=-v:refname | grep '^v' | sed -n '2p' || true)
           if [ -z "$PREV" ]; then
             CHANGES=$(git log --oneline --no-decorate | head -50)
           else
-            CHANGES=$(git log --oneline --no-decorate "${PREV}..HEAD")
+            CHANGES=$(git log --oneline --no-decorate "$PREV..HEAD")
           fi
           {
-            echo "## TianJi-SiZhu ${TAG}"
+            echo "## TianJi-SiZhu v$V"
             echo ""
-            echo "Open-source BaZi desktop client."
+            echo "开源四柱排盘 · 桌面三平台 + Android。"
             echo ""
-            echo "### Downloads"
-            echo "| Platform | File |"
-            echo "|----------|------|"
-            echo "| Windows | *.exe |"
-            echo "| macOS | *.dmg |"
-            echo "| Linux | *.tar.gz |"
-            echo "| Android (arm64-v8a) | *-android-arm64-v8a.apk |"
-            echo "| Android (armeabi-v7a) | *-android-armeabi-v7a.apk |"
-            echo "| Android (x86_64) | *-android-x86_64.apk |"
-            echo "| Android (universal) | *-android-universal.apk |"
+            echo "### 下载 / Downloads"
             echo ""
-            echo "> Android APKs are signed with the project debug key unless a release keystore is configured. Install via \"unknown sources\"."
+            echo "| 平台 | 架构 | 形态 | 文件 |"
+            echo "|------|------|------|------|"
+            echo "| Windows | amd64 | 安装包 | \`tianji-sizhu-$V-windows-amd64-setup.exe\` |"
+            echo "| Windows | arm64 | 安装包 | \`tianji-sizhu-$V-windows-arm64-setup.exe\` |"
+            echo "| Windows | amd64 | 免安装 | \`tianji-sizhu-$V-windows-amd64-portable.zip\` |"
+            echo "| Windows | arm64 | 免安装 | \`tianji-sizhu-$V-windows-arm64-portable.zip\` |"
+            echo "| macOS | arm64 | DMG | \`tianji-sizhu-$V-macos-arm64.dmg\` |"
+            echo "| macOS | amd64 | DMG | \`tianji-sizhu-$V-macos-amd64.dmg\` |"
+            echo "| macOS | arm64 | 免安装 | \`tianji-sizhu-$V-macos-arm64-portable.zip\` |"
+            echo "| macOS | amd64 | 免安装 | \`tianji-sizhu-$V-macos-amd64-portable.zip\` |"
+            echo "| Android | arm64-v8a | APK | \`tianji-sizhu-$V-android-arm64-v8a.apk\` |"
+            echo "| Android | universal | APK | \`tianji-sizhu-$V-android-universal.apk\` |"
+            echo ""
+            echo "### 校验 / Verify"
+            echo ""
+            echo "每个包都可用 \`SHA256SUMS-$V.txt\` 校验；\`artifacts-manifest.json\` 记录了架构与版本断言结果。"
+            echo ""
+            echo "\`\`\`bash"
+            echo "sha256sum -c SHA256SUMS-$V.txt"
+            echo "\`\`\`"
+            echo ""
+            echo "### 首次运行提示"
+            echo ""
+            echo "- **Windows**：安装包未做代码签名，SmartScreen 可能拦截 →「更多信息」→「仍要运行」。"
+            echo "  免安装版需要系统已有 WebView2 Runtime（Win10 建议用安装包）。"
+            echo "- **macOS**：ad-hoc 签名，首次打开请右键 →「打开」；或"
+            echo "  \`xattr -dr com.apple.quarantine /Applications/tianji-sizhu.app\`。"
+            echo "  **请勿全局关闭 Gatekeeper。**"
+            echo "- **Android**：调试签名，侧载需允许「未知来源」。"
             echo ""
             echo "### Commits"
+            echo ""
             echo "$CHANGES"
-          } > changelog.md
+          } > notes.md
+          cat notes.md
 
-      - name: Create GitHub Release
+      - name: Publish
         uses: softprops/action-gh-release@v2
         with:
-          name: "TianJi-SiZhu ${{ github.ref_name }}"
-          body_path: changelog.md
+          name: "TianJi-SiZhu v${{ needs.preflight.outputs.version }}"
+          body_path: notes.md
           draft: false
           prerelease: false
           fail_on_unmatched_files: false
-          files: |
-            release-assets/**/*.exe
-            release-assets/**/*.dmg
-            release-assets/**/*.tar.gz
-            release-assets/**/*.apk
+          files: out/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

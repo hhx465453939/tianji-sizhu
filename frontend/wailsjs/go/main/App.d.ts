@@ -4,6 +4,8 @@ import {database} from '../models';
 
 export function CopyToClipboard(arg1:string):Promise<void>;
 
+export function DataDir():Promise<string>;
+
 export function DeleteChart(arg1:number):Promise<void>;
 
 export function ExportChartsJSON():Promise<string>;
@@ -15,5 +17,7 @@ export function ListCharts():Promise<Array<database.ChartSummary>>;
 export function SaveChart(arg1:string,arg2:number,arg3:number,arg4:number,arg5:number,arg6:number,arg7:number,arg8:string,arg9:string):Promise<number>;
 
 export function SaveFileDialog(arg1:string):Promise<string>;
+
+export function StartupError():Promise<string>;
 
 export function WriteFile(arg1:string,arg2:string):Promise<void>;

@@ -1,10 +1,12 @@
 # ── Build artifacts ─────────────────────────
-/build/
+# build/ resources (NSIS script, Info.plist, appicon) ARE committed; only the
+# generated binaries are ignored (CHG-004 ADR-011).
+/build/bin/
 *.apk
 *.aab
 *.jks
 *.keystore
-release/
+/release/
 *.exe
 *.exe~
 *.dll
@@ -16,6 +18,13 @@ release/
 *.msi
 *.deb
 *.rpm
+
+# ── Wails generated ────────────────────────
+*.syso
+build/windows/icon.ico
+build/windows/wails.exe.manifest
+build/windows/installer/wails_tools.nsh
+build/windows/installer/tmp/
 
 # ── Frontend ───────────────────────────────
 frontend/node_modules/

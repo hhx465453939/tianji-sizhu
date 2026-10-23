@@ -39,6 +39,29 @@ check() {
 # Machine-wide runtimes (JDK, Python) are legitimately installed once per host
 # and are NOT project dependencies: reusing them is expected. Only project-owned
 # SDKs, caches, emulators and keystores must stay inside the repository.
+
+# Go caches are checked against what `go env` would actually use, so an
+# unsourced environment is reported as a leak rather than passing silently.
+check_go() {
+  local label="$1" key="$2"
+  local value
+  value="$(go env "$key" 2>/dev/null | tr -d '\r\n')"
+  if [ -z "$value" ]; then
+    printf '  %-24s %-46s %s\n' "$label" "<unset>" "MISSING"
+    FAIL=1
+    return
+  fi
+  local nv
+  nv="$(norm "$value")"
+  case "$nv" in
+    "$ROOT"|"$ROOT"/*)
+      printf '  %-24s %-46s %s\n' "$label" "$value" "OK inside project" ;;
+    *)
+      printf '  %-24s %-46s %s\n' "$label" "$value" "OUTSIDE PROJECT (source scripts/go-env.sh)"
+      FAIL=1 ;;
+  esac
+}
+
 check_host_runtime() {
   local label="$1" value="$2"
   local nv
@@ -70,6 +93,16 @@ check "VIRTUAL_ENV"           "${VIRTUAL_ENV:-}"            no
 check "PNPM_HOME"             "${PNPM_HOME:-}"              no
 check "XDG_CACHE_HOME"        "${XDG_CACHE_HOME:-}"         no
 check "TMPDIR"                "${TMPDIR:-}"                 no
+
+echo ""
+echo "-- Go build caches --"
+if command -v go >/dev/null 2>&1; then
+  check_go "GOCACHE"     "GOCACHE"
+  check_go "GOMODCACHE"  "GOMODCACHE"
+  check_go "GOBIN"       "GOBIN"
+else
+  printf '  %-24s %-46s %s\n' "go" "<not installed>" "optional"
+fi
 
 echo ""
 echo "-- Host-global leak detection --"
