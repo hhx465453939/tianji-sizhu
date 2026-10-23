@@ -4,7 +4,7 @@
 **提出日期**: 2026-10-22
 **类型**: 发布工程 + 构建体系 + CI/CD + 测试环境治理（无业务逻辑变更）
 **影响面**: `.github/workflows/release.yml`、`.cnb.yml`、`scripts/release/**`（新增）、`VERSION`（新增）、`wails.json`、`.gitignore`、`build/`（部分入库）、`app.go`（数据目录解析）、`AGENTS.md` + `CLAUDE.md`、`docs/SPEC.md`
-**状态**: `implemented` — M1–M7 已完成（2026-10-23）；M8 首次实发待执行
+**状态**: `closed` — M1–M8 全部完成；v1.2.0 已发布（8 桌面产物 + 5 APK），用户端到端验收通过（2026-10-23）
 
 ---
 

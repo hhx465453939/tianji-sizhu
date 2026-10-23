@@ -271,8 +271,25 @@ powershell -File scripts/release/smoke-windows.ps1 \
 
 判读：x64 二进制在本机可运行（WebView2 与依赖齐备）；安装包流程需 UAC，未提权时如实 `not-executed`，不伪造 PASS。
 
-### 5.5 待补
+### 5.5 补齐结果（2026-10-23 闭环）
 
-- [ ] CI 重建后，v1.2.0 出现 `macos-{amd64,arm64}-installer.pkg`
-- [ ] `SHA256SUMS-1.2.0.txt` 条目数 = 8
-- [ ] 提权后补跑 Windows x64 安装包 L3（需人工点一次 UAC）
+- [x] CI 重建后，v1.2.0 出现 `macos-{amd64,arm64}-installer.pkg`（run `39908648742` 全绿）
+- [x] `SHA256SUMS-1.2.0.txt` 条目数 = 8（旧版 6 条且完全不含 macOS）
+- [x] Windows x64 安装包链路：由用户人工端到端验收覆盖（“端到端我测完了，可以用”）；CI 内提权冒烟仍为 `SKIP: not elevated`，未伪造自动 PASS
+
+### 5.6 闭环证据（2026-10-23）
+
+| 证据 | 值 |
+|------|-----|
+| CI run | `39908648742` — preflight / win×2 / mac×2 / android / verify / publish 全绿 |
+| Release | v1.2.0：15 个资产 = 8 桌面产物 + 5 APK + `SHA256SUMS` + `artifacts-manifest.json` |
+| `SHA256SUMS-1.2.0.txt` | 8 条，覆盖 4 安装包 + 4 免安装 |
+| `artifacts-manifest.json` | `all_checks_pass: true`，`failures: []` |
+| 用户验收 | 人工端到端通过（安装 / 启动 / 使用） |
+| 文档一致性 | `AGENTS.md` ≡ `CLAUDE.md`；矩阵 = 4 安装包 + 4 免安装 |
+
+**遗留（不阻塞闭环，已登记）**
+
+- CI runner 非提权，Windows 安装包 L3 自动化始终 `SKIP`；本地提权单次可跑通
+- `macos-*-appzip` 在 Linux verify 上为 `skip:needs-darwin`（架构断言由 mac job 的 L4 承担）
+- L5 清洁室（`git archive` 导出重建）尚未作为门禁自动化，仅保留脚本与文档契约

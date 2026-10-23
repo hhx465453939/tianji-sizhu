@@ -382,7 +382,7 @@ tianji-sizhu/
 | 安装包体积 | 桌面 < 20MB；Android 单 ABI ≈ 3.8MB |
 | 内存占用 | < 100MB |
 | 离线可用 | 全部核心功能不依赖网络（Android 仅申请 INTERNET 用于 WebView 本地资源加载） |
-| 系统要求 | Windows 10+ x64 / macOS 11+ / Linux x64 / Android 7.0+（minSdk 24） |
+| 系统要求 | Windows 10+（x64 / arm64）/ macOS 11+（Intel x64 / Apple Silicon arm64）/ Android 7.0+（minSdk 24；arm64-v8a / armeabi-v7a / x86 / x86_64 / universal）。Linux 桌面端已停止发布（legacy）。 |
 
 ---
 
