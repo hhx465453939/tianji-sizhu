@@ -99,10 +99,12 @@ case "$MODE" in
     die "host '$HOST_OS' cannot produce native packages (use CI)" 2 ;;
 esac
 
-# 5. portable archives
-for arch in amd64 arm64; do
-  bash "$RELEASE_ROOT/scripts/release/package-portable.sh" --os "$MODE" --arch "$arch" || exit $?
-done
+# 5. portable archives (Windows only; macOS ships a signed .app zip)
+if [ "$MODE" = "windows" ]; then
+  for arch in amd64 arm64; do
+    bash "$RELEASE_ROOT/scripts/release/package-portable.sh" --os windows --arch "$arch" || exit $?
+  done
+fi
 
 # 6. verification + manifest
 bash "$RELEASE_ROOT/scripts/release/verify-artifacts.sh" || exit $?

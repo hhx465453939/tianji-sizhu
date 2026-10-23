@@ -53,6 +53,7 @@ emit() {
   case "$kind" in
     setup)    limit=28000000 ;;
     portable) limit=22000000 ;;
+    appzip)   limit=30000000 ;;
     dmg)      limit=30000000 ;;
     app)      limit=30000000 ;;
   esac
@@ -116,10 +117,10 @@ emit "tianji-sizhu-$VERSION-windows-amd64-setup.exe"     windows amd64 setup
 emit "tianji-sizhu-$VERSION-windows-arm64-setup.exe"     windows arm64 setup
 emit "tianji-sizhu-$VERSION-windows-amd64-portable.zip"  windows amd64 portable
 emit "tianji-sizhu-$VERSION-windows-arm64-portable.zip"  windows arm64 portable
-emit "tianji-sizhu-$VERSION-macos-amd64.dmg"             macos   amd64 dmg
-emit "tianji-sizhu-$VERSION-macos-arm64.dmg"             macos   arm64 dmg
-emit "tianji-sizhu-$VERSION-macos-amd64-portable.zip"    macos   amd64 portable
-emit "tianji-sizhu-$VERSION-macos-arm64-portable.zip"    macos   arm64 portable
+# macOS ships a signed .app zip: hdiutil is unusable on CI runners (hangs in
+# kernel state), and ditto preserves the ad-hoc signature and symlinks.
+emit "tianji-sizhu-$VERSION-macos-amd64-app.zip"         macos   amd64 appzip
+emit "tianji-sizhu-$VERSION-macos-arm64-app.zip"         macos   arm64 appzip
 
 if [ "$ALLOW_PARTIAL" = "1" ] && [ -n "$MISSING" ]; then
   warn "partial build: missing$MISSING (allowed locally, forbidden in CI)"

@@ -172,26 +172,23 @@ jobs:
         working-directory: frontend
         run: pnpm build
 
-      - name: Build app + dmg
+      - name: Build app bundle
         run: |
           set -euo pipefail
           bash scripts/release/build-macos.sh --arch "${{ matrix.arch }}" --skip-frontend
-          bash scripts/release/package-portable.sh --os macos --arch "${{ matrix.arch }}"
 
-      - name: L4 mount/launch lifecycle
+      - name: L4 extract/launch lifecycle
         continue-on-error: true
         run: |
           V="$(tr -d '[:space:]' < VERSION)"
           bash scripts/release/smoke-macos.sh \
-            --dmg ".tmp/release/$V/tianji-sizhu-$V-macos-${{ matrix.arch }}.dmg" \
+            --zip ".tmp/release/$V/tianji-sizhu-$V-macos-${{ matrix.arch }}-app.zip" \
             --expect-arch "${{ matrix.arch }}" --expect-version "$V"
 
       - uses: actions/upload-artifact@v4
         with:
           name: release-macos-${{ matrix.arch }}
-          path: |
-            .tmp/release/*/*.dmg
-            .tmp/release/*/*.zip
+          path: .tmp/release/*/*.zip
           if-no-files-found: error
 
   # ------------------------------------------------------------- android (kept)

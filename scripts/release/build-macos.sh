@@ -86,13 +86,14 @@ cat > "$STAGE/安装说明.txt" <<'TXT'
 （请勿全局关闭 Gatekeeper）
 TXT
 
-DMG="$OUT/tianji-sizhu-$VERSION-macos-$ARCH.dmg"
-rm -f "$DMG"
-# -fs HFS+ is deprecated on macOS 14+ and hung for 25+ minutes on CI.
-# Use the system default filesystem (APFS) and enforce a hard timeout.
-run_timeout 420 hdiutil create -volname "TianJi-SiZhu $VERSION $ARCH" \
-  -srcfolder "$STAGE" -format UDZO -ov "$DMG" >/dev/null 2>&1 \
-  || die "hdiutil create failed or timed out" 3
+# DMG via hdiutil is unreliable on macOS 14 CI runners: it hung for 25+ minutes
+# in an uninterruptible kernel state (SIGKILL had no effect). Ship a signed
+# .app zip instead - ditto preserves the code signature and symlinks, and the
+# user drags the app to /Applications. Install hints live in the Release notes.
+ZIP_OUT="$OUT/tianji-sizhu-$VERSION-macos-$ARCH-app.zip"
+rm -f "$ZIP_OUT"
+run_timeout 420 ditto -c -k --keepParent "$APP" "$ZIP_OUT" >/dev/null 2>&1 \
+  || die "ditto failed or timed out" 3
 
-ok "dmg: $(basename "$DMG")  $(file_bytes "$DMG") bytes"
+ok "app.zip: $(basename "$ZIP_OUT")  $(file_bytes "$ZIP_OUT") bytes"
 log "done ($ARCH) -> $OUT"
