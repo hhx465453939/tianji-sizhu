@@ -46,7 +46,13 @@ OUT="$RELEASE_ROOT/.tmp/release/$VERSION"
 mkdir -p "$OUT"
 
 log "wails build darwin/$ARCH"
-( cd "$RELEASE_ROOT" && wails build -platform "darwin/$ARCH" -s ) >/dev/null || die "wails build failed" 3
+# Keep the full log: swallowing stdout made a CI failure undiagnosable.
+BUILD_LOG="$RELEASE_ROOT/.tmp/wails-darwin-$ARCH.log"
+if ! ( cd "$RELEASE_ROOT" && wails build -platform "darwin/$ARCH" -s ) > "$BUILD_LOG" 2>&1; then
+  echo "----- wails build output (tail) -----" >&2
+  tail -40 "$BUILD_LOG" >&2
+  die "wails build failed (full log: .tmp/wails-darwin-$ARCH.log)" 3
+fi
 
 APP="$RELEASE_ROOT/build/bin/tianji-sizhu.app"
 [ -d "$APP" ] || die "app bundle missing: $APP" 3

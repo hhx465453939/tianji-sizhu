@@ -43,11 +43,13 @@ echo "[android] cap sync"
 
 # 5. Gradle assembleRelease (splits produce per-ABI + universal)
 echo "[android] gradle assembleRelease"
-GRADLEW="./gradlew"
-if [ -f "$ROOT/frontend/android/gradlew.bat" ] && [ ! -x "$ROOT/frontend/android/gradlew" ]; then
-  GRADLEW="./gradlew.bat"
-fi
-( cd "$ROOT/frontend/android" && chmod +x gradlew 2>/dev/null || true; $GRADLEW assembleRelease --no-daemon --max-workers=2 )
+# Pick the wrapper by HOST, not by file presence: gradlew.bat exists everywhere
+# but is not executable on Linux, and gradlew usually lacks the exec bit in git.
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) GRADLEW="./gradlew.bat" ;;
+  *) chmod +x "$ROOT/frontend/android/gradlew" 2>/dev/null || true; GRADLEW="./gradlew" ;;
+esac
+( cd "$ROOT/frontend/android" && $GRADLEW assembleRelease --no-daemon --max-workers=2 )
 
 # 6. Normalize artifact names
 OUT_DIR="$ROOT/release"

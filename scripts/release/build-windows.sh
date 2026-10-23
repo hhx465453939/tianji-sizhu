@@ -77,7 +77,13 @@ mkdir -p "$OUT"
 log "wails build windows/$ARCH (nsis=$([ "$NO_NSIS" = "1" ] && echo no || echo yes))"
 WAILS_ARGS=(-platform "windows/$ARCH" -s)
 [ "$NO_NSIS" = "1" ] || WAILS_ARGS+=(-nsis)
-( cd "$RELEASE_ROOT" && wails build "${WAILS_ARGS[@]}" ) >/dev/null || die "wails build failed" 3
+# Keep the full log: swallowing stdout made a CI failure undiagnosable.
+BUILD_LOG="$RELEASE_ROOT/.tmp/wails-windows-$ARCH.log"
+if ! ( cd "$RELEASE_ROOT" && wails build "${WAILS_ARGS[@]}" ) > "$BUILD_LOG" 2>&1; then
+  echo "----- wails build output (tail) -----" >&2
+  tail -40 "$BUILD_LOG" >&2
+  die "wails build failed (full log: .tmp/wails-windows-$ARCH.log)" 3
+fi
 
 # --- application binary -------------------------------------------------
 EXE_SRC="$RELEASE_ROOT/build/bin/tianji-sizhu.exe"
