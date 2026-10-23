@@ -11,17 +11,18 @@
 |---|------|------|------|--------|
 | 1 | Windows | amd64 | 安装包 | `tianji-sizhu-<ver>-windows-amd64-setup.exe` |
 | 2 | Windows | arm64 | 安装包 | `tianji-sizhu-<ver>-windows-arm64-setup.exe` |
-| 3 | macOS | arm64 | DMG | `tianji-sizhu-<ver>-macos-arm64.dmg` |
-| 4 | macOS | amd64 | DMG | `tianji-sizhu-<ver>-macos-amd64.dmg` |
-| 5 | Windows | amd64 | 免安装 | `tianji-sizhu-<ver>-windows-amd64-portable.zip` |
-| 6 | Windows | arm64 | 免安装 | `tianji-sizhu-<ver>-windows-arm64-portable.zip` |
-| 7 | macOS | arm64 | 免安装 | `tianji-sizhu-<ver>-macos-arm64-portable.zip` |
-| 8 | macOS | amd64 | 免安装 | `tianji-sizhu-<ver>-macos-amd64-portable.zip` |
-| 9 | — | — | 校验清单 | `SHA256SUMS-<ver>.txt` |
-| 10 | — | — | 断言清单 | `artifacts-manifest.json` |
+| 3 | Windows | amd64 | 免安装 | `tianji-sizhu-<ver>-windows-amd64-portable.zip` |
+| 4 | Windows | arm64 | 免安装 | `tianji-sizhu-<ver>-windows-arm64-portable.zip` |
+| 5 | macOS | arm64 | 签名 app 包 | `tianji-sizhu-<ver>-macos-arm64-app.zip` |
+| 6 | macOS | amd64 | 签名 app 包 | `tianji-sizhu-<ver>-macos-amd64-app.zip` |
+| 7 | — | — | 校验清单 | `SHA256SUMS-<ver>.txt` |
+| 8 | — | — | 断言清单 | `artifacts-manifest.json` |
 
 另有 Android APK（`arm64-v8a` / `armeabi-v7a` / `x86_64` / `universal`）与 Linux `legacy` 包。
 **缺一不发**；缺某架构就如实缺并在 Release Notes 声明，严禁用 x64 包冒充 arm64。
+
+> macOS 不再提供 DMG：`hdiutil` 在 macOS 14 CI runner 上会挂死在内核态（SIGKILL 无效）。
+> `.app.zip` 由 `ditto -c -k --keepParent` 生成，保留 ad-hoc 签名与符号链接，解压后拖入 `/Applications` 即可。
 
 ---
 

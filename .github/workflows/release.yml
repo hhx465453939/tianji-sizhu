@@ -120,6 +120,7 @@ jobs:
       - name: L3 install/uninstall lifecycle
         shell: pwsh
         continue-on-error: true
+        timeout-minutes: 10
         run: |
           $v = (Get-Content VERSION -Raw).Trim()
           ./scripts/release/smoke-windows.ps1 `
@@ -179,6 +180,7 @@ jobs:
 
       - name: L4 extract/launch lifecycle
         continue-on-error: true
+        timeout-minutes: 5
         run: |
           V="$(tr -d '[:space:]' < VERSION)"
           bash scripts/release/smoke-macos.sh \

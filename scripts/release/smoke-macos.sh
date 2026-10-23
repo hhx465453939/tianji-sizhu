@@ -54,7 +54,8 @@ if [ -n "$VER" ]; then
 fi
 
 # spctl is expected to FAIL without notarisation; record it, never block on it.
-SPCTL="$(spctl -a -vv "$APP" 2>&1 || true)"
+# Wrap in a timeout: on CI it can block on Gatekeeper services.
+SPCTL="$(run_timeout 30 spctl -a -vv "$APP" 2>&1 || true)"
 warn "Gatekeeper: ${SPCTL:-<no output>} (expected unsigned/adhoc)"
 
 # Launch from the extracted (writable) copy so the data dir can be created.
@@ -66,6 +67,8 @@ if ! kill -0 "$PID" 2>/dev/null; then
 fi
 ok "app alive after 5s (pid=$PID)"
 kill "$PID" 2>/dev/null || true
+sleep 2
+kill -9 "$PID" 2>/dev/null || true
 wait "$PID" 2>/dev/null || true
 
 ok "PASS"

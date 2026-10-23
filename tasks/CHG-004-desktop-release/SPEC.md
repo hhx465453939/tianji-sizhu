@@ -61,14 +61,15 @@ approved_at: 2026-10-23
 ```
 tianji-sizhu-1.2.0-windows-amd64-setup.exe      ← NSIS 安装包
 tianji-sizhu-1.2.0-windows-arm64-setup.exe
-tianji-sizhu-1.2.0-macos-amd64.dmg              ← DMG 安装镜像
-tianji-sizhu-1.2.0-macos-arm64.dmg
 tianji-sizhu-1.2.0-windows-amd64-portable.zip   ← 解压即用
 tianji-sizhu-1.2.0-windows-arm64-portable.zip
-tianji-sizhu-1.2.0-macos-amd64-portable.zip
-tianji-sizhu-1.2.0-macos-arm64-portable.zip
+tianji-sizhu-1.2.0-macos-amd64-app.zip          ← 签名 .app 包（ditto）
+tianji-sizhu-1.2.0-macos-arm64-app.zip
 SHA256SUMS-1.2.0.txt
 ```
+
+> **已废除 DMG**：`hdiutil` 在 macOS 14 CI runner 上挂死在内核态（SIGKILL 无效，实测 25 分钟不返回）。
+> macOS 统一交付 `ditto -c -k --keepParent` 出的签名 `.app.zip`，解压后拖入 `/Applications`。
 
 规则：
 - `version` 来自 `VERSION` 文件（无 `v` 前缀）；文件名、安装元数据、tag 三处必须一致。

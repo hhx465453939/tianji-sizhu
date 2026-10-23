@@ -189,15 +189,15 @@ bash scripts/release/clean.sh --dry-run
 |---|------|------|------|--------|
 | 1 | Windows | amd64 | 安装包（NSIS） | `tianji-sizhu-<ver>-windows-amd64-setup.exe` |
 | 2 | Windows | arm64 | 安装包（NSIS） | `tianji-sizhu-<ver>-windows-arm64-setup.exe` |
-| 3 | macOS | amd64 | 安装包（DMG） | `tianji-sizhu-<ver>-macos-amd64.dmg` |
-| 4 | macOS | arm64 | 安装包（DMG） | `tianji-sizhu-<ver>-macos-arm64.dmg` |
-| 5 | Windows | amd64 | 免安装 ZIP | `tianji-sizhu-<ver>-windows-amd64-portable.zip` |
-| 6 | Windows | arm64 | 免安装 ZIP | `tianji-sizhu-<ver>-windows-arm64-portable.zip` |
-| 7 | macOS | amd64 | 免安装 ZIP | `tianji-sizhu-<ver>-macos-amd64-portable.zip` |
-| 8 | macOS | arm64 | 免安装 ZIP | `tianji-sizhu-<ver>-macos-arm64-portable.zip` |
-| 9 | — | — | 校验清单 | `SHA256SUMS-<ver>.txt` |
+| 3 | Windows | amd64 | 免安装 ZIP | `tianji-sizhu-<ver>-windows-amd64-portable.zip` |
+| 4 | Windows | arm64 | 免安装 ZIP | `tianji-sizhu-<ver>-windows-arm64-portable.zip` |
+| 5 | macOS | amd64 | 签名 app 包 | `tianji-sizhu-<ver>-macos-amd64-app.zip` |
+| 6 | macOS | arm64 | 签名 app 包 | `tianji-sizhu-<ver>-macos-arm64-app.zip` |
+| 7 | — | — | 校验清单 | `SHA256SUMS-<ver>.txt` |
 
-- 8 个产物 + 1 个清单，缺一不发
+- **6 个产物 + 1 个清单**，缺一不发
+- macOS 交付 `.app.zip`（`ditto` 保留 ad-hoc 签名与符号链接）；**不使用 DMG**：
+  `hdiutil` 在 macOS 14 CI runner 上会挂死在内核态（SIGKILL 无效，实测卡死 25 分钟以上）
 - 缺某个架构就**如实缺**并在 Release Notes 声明，严禁用 x64 包冒充 arm64
 - 无 `SHA256SUMS` 不得发布
 
@@ -226,7 +226,8 @@ bash scripts/release/clean.sh --dry-run
 
 1. **NSIS 静默降级是陷阱**：`makensis` 缺失时 Wails 打印 warn 后返回成功（不产安装包）。构建脚本必须在 `wails build` 之后断言 `*-<arch>-installer.exe` 存在，缺失 `exit 3`。
 2. **macOS 签名**：必须保留 Wails 的 ad-hoc 签名，并额外断言 `codesign --verify --deep --strict` 通过；`spctl` 失败属已知情形，需写入证据而非当作构建失败。
-3. **DMG**：`hdiutil create -volname "天机四柱 <ver> (<arch>)" -fs HFS+ -format UDZO`，staging 含 `.app` + `/Applications` 符号链接 + 安装说明。
+3. **macOS 交付 `.app.zip`**：`ditto -c -k --keepParent`，保留 ad-hoc 签名与符号链接；
+   `hdiutil`/DMG **禁用**（macOS 14 CI 上挂死在内核态）。安装引导写在 Release Notes。
 4. **免安装版**：Windows 用 zip；macOS **必须** `ditto -c -k --keepParent --sequesterRsrc`，禁止 `zip` CLI（会破坏 bundle 签名与符号链接）。
 5. **打包资源入库**：`build/appicon.png`、`build/windows/info.json`、`build/windows/installer/project.nsi`、`build/darwin/Info.plist`。`build/bin/`、`build/windows/installer/wails_tools.nsh`、`build/windows/installer/tmp/` 不入库。`.gitignore` 只忽略 `/build/bin/`，不再整体忽略 `build/`。
 6. **视觉是变量**：图标图形、配色、显示名文案可随品牌演进替换，此类变更**不触发**打包/签名/生命周期用例重跑；只有尺寸、格式、路径、签名对象变化才需重跑 L2–L4。
@@ -272,7 +273,7 @@ bash scripts/release/clean.sh --dry-run
 
 ### 8. 发布验收与禁止事项
 
-**DoD（缺一不发）**：8 产物 + `SHA256SUMS` 全部可下载且 `sha256sum -c` 通过；架构断言（PE `0x8664`/`0xAA64`、Mach-O `x86_64`/`arm64` 单一）全绿；五处版本一致；L3/L4 通过（或按规则降级并记录）；`scripts/env-check.sh` PASS；`diff AGENTS.md CLAUDE.md` 为空。
+**DoD（缺一不发）**：6 产物 + `SHA256SUMS` 全部可下载且 `sha256sum -c` 通过；架构断言（PE `0x8664`/`0xAA64`、Mach-O `x86_64`/`arm64` 单一）全绿；五处版本一致；L3/L4 通过（或按规则降级并记录）；`scripts/env-check.sh` PASS；`diff AGENTS.md CLAUDE.md` 为空。
 
 **禁止**：
 - ❌ 用 universal 包改名为 amd64/arm64 包
