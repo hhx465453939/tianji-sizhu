@@ -1,2 +1,11 @@
+# pnpm 9 requires a non-empty `packages` field: `allowBuilds` alone fails with
+# "packages field missing or empty" (that was the CI failure).
+# `allowBuilds` is the pnpm 10/11 home for build-script approvals; the
+# `pnpm` field in package.json is ignored by pnpm 11 (it warns and skips).
+# Keeping both keys makes the file valid for pnpm 9 (packages) and correct for
+# pnpm 10/11 (allowBuilds), so local and CI behave the same.
+packages:
+  - '.'
+
 allowBuilds:
   esbuild: true

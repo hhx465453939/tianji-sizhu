@@ -89,8 +89,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Install Wails CLI
         shell: bash
@@ -156,8 +154,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Install Wails CLI
         run: |
@@ -215,8 +211,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: android-actions/setup-android@v3
         with:
@@ -253,6 +247,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - uses: pnpm/action-setup@v4
+
       - name: System deps
         run: |
           sudo apt-get update
@@ -265,7 +261,10 @@ jobs:
 
       - name: Build (legacy)
         run: |
-          wails build -platform linux/amd64
+          set -euo pipefail
+          # wails.json drives pnpm, so the frontend must be built explicitly here.
+          (cd frontend && pnpm install --frozen-lockfile && pnpm build)
+          wails build -platform linux/amd64 -s
           cd build/bin && tar czf "tianji-sizhu-linux-amd64.tar.gz" tianji-sizhu
 
       - uses: actions/upload-artifact@v4
